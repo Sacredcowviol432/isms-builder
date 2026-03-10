@@ -1,0 +1,448 @@
+<!-- © 2026 Claude Hecker — ISMS Builder V 1.28 — AGPL-3.0 -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISMS Builder – Anmelden</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <style>
+    :root {
+      --bg:       #1D2125;
+      --surface:  #22272B;
+      --raised:   #2C333A;
+      --border:   #3B4350;
+      --text:     #B6C2CF;
+      --text-inv: #FFFFFF;
+      --subtle:   #8C9BAB;
+      --accent:   #0052CC;
+      --accent-h: #0065FF;
+      --danger:   #F97171;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0;
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Arial, sans-serif;
+      font-size: 14px;
+    }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+    .login-brand {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text-inv); font-size: 20px; font-weight: 700; margin-bottom: 28px;
+    }
+    .login-brand i { font-size: 28px; color: #4C9AFF; }
+
+    .login-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 32px 36px; width: 360px; max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,.55);
+    }
+    .login-card h2 {
+      margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-inv);
+    }
+    .login-card p {
+      margin: 0 0 22px; font-size: 13px; color: var(--subtle);
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--subtle); margin-bottom: 5px; }
+    .form-group .input-wrap { position: relative; }
+    .form-group .input-icon {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--subtle); font-size: 16px; pointer-events: none;
+    }
+    .form-group input {
+      width: 100%; padding: 9px 12px 9px 36px;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: var(--raised); color: var(--text-inv);
+      font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .form-group input::placeholder { color: #596773; }
+
+    #totp-area { display: none; }
+    #totp-area .totp-hint {
+      font-size: 12px; color: var(--subtle); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .btn-login {
+      width: 100%; padding: 10px 16px; margin-top: 4px;
+      border-radius: 6px; border: none;
+      background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { background: var(--accent-h); }
+    .btn-login i { font-size: 17px; }
+
+    #error-msg {
+      display: none; margin-top: 14px;
+      color: var(--danger); font-size: 13px;
+      background: rgba(202,53,33,.12); border: 1px solid rgba(202,53,33,.3);
+      padding: 8px 12px; border-radius: 6px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    #error-msg i { flex-shrink: 0; }
+
+    .login-footer {
+      margin-top: 24px; font-size: 12px; color: var(--subtle); text-align: center;
+    }
+
+    /* ── Demo-Reset-Banner ── */
+    .demo-reset-banner {
+      display: none; width: 360px; max-width: 95vw;
+      margin-bottom: 16px; padding: 14px 16px;
+      background: rgba(255,171,0,.12); border: 1px solid rgba(255,171,0,.45);
+      border-radius: 8px; color: #FFD700;
+      font-size: 13px; line-height: 1.5;
+    }
+    .demo-reset-banner b { color: #FFEA70; display: block; margin-bottom: 4px; font-size: 13.5px; }
+    .demo-reset-banner.visible { display: block; }
+
+    /* ── Vorfall-melden Button ── */
+    .btn-incident {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 16px; width: 360px; max-width: 95vw;
+      padding: 10px 16px; border-radius: 6px; border: 1px solid #c0392b;
+      background: rgba(192,57,43,.12); color: #e74c3c;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background .15s, color .15s; text-decoration: none;
+    }
+    .btn-incident:hover { background: rgba(192,57,43,.22); color: #ff6b6b; }
+    .btn-incident i { font-size: 18px; }
+
+    /* ── Incident Modal ── */
+    .inc-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.65); z-index: 500;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .inc-overlay.open { display: flex; }
+    .inc-dialog {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; width: 560px; max-width: 100%;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 12px 48px rgba(0,0,0,.7);
+    }
+    .inc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+    }
+    .inc-header h3 {
+      margin: 0; font-size: 16px; font-weight: 700; color: #fff;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .inc-header h3 i { color: #e74c3c; }
+    .inc-close {
+      background: none; border: none; color: var(--subtle); cursor: pointer;
+      font-size: 20px; padding: 2px 6px; border-radius: 4px;
+      line-height: 1;
+    }
+    .inc-close:hover { color: #fff; background: var(--raised); }
+    .inc-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+    .inc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .inc-group { display: flex; flex-direction: column; gap: 5px; }
+    .inc-group.full { grid-column: 1 / -1; }
+    .inc-label {
+      font-size: 11px; font-weight: 600; color: var(--subtle);
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .inc-label .req { color: #e74c3c; margin-left: 2px; }
+    .inc-input, .inc-select, .inc-textarea {
+      background: var(--raised); border: 1px solid var(--border);
+      border-radius: 6px; color: #fff; font-family: inherit;
+      font-size: 13px; padding: 8px 10px; outline: none;
+      transition: border-color .15s; width: 100%;
+    }
+    .inc-input:focus, .inc-select:focus, .inc-textarea:focus { border-color: #e74c3c; }
+    .inc-textarea { resize: vertical; min-height: 72px; }
+    .inc-select option { background: var(--raised); }
+    .inc-footer {
+      padding: 16px 24px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .btn-cancel-inc {
+      padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--raised); color: var(--subtle); font-family: inherit;
+      font-size: 13px; cursor: pointer;
+    }
+    .btn-cancel-inc:hover { color: #fff; }
+    .btn-submit-inc {
+      padding: 8px 20px; border-radius: 6px; border: none;
+      background: #c0392b; color: #fff; font-family: inherit;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: background .15s;
+    }
+    .btn-submit-inc:hover { background: #e74c3c; }
+    .btn-submit-inc:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* Bestätigung */
+    .inc-confirm {
+      padding: 28px 24px; text-align: center;
+    }
+    .inc-confirm-icon { font-size: 48px; color: #27ae60; margin-bottom: 12px; }
+    .inc-confirm h4 { color: #fff; margin: 0 0 8px; font-size: 17px; }
+    .inc-confirm p { color: var(--subtle); font-size: 13px; margin: 0 0 6px; }
+    .inc-confirm .ref { color: #4C9AFF; font-weight: 700; font-size: 15px; }
+    .inc-err { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 4px; display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="login-brand">
+    <i class="ph ph-shield-check"></i>
+    ISMS Builder
+  </div>
+
+  <div class="demo-reset-banner" id="demoResetBanner">
+    <b><i class="ph ph-warning"></i> Demo-Modus beendet</b>
+    Das System wurde für den Produktivbetrieb zurückgesetzt. Bitte melden Sie sich mit
+    Benutzername <strong>admin</strong> / Passwort <strong>adminpass</strong> an
+    und ändern Sie das Passwort sofort nach dem ersten Login.
+  </div>
+
+  <div class="login-card">
+    <h2>Willkommen zurück</h2>
+    <p>Melde dich mit deinen ISMS-Zugangsdaten an.</p>
+
+    <div class="form-group">
+      <label for="email">E-Mail-Adresse</label>
+      <div class="input-wrap">
+        <i class="ph ph-envelope input-icon"></i>
+        <input id="email" type="email" placeholder="name@beispiel.de" autocomplete="email" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Passwort</label>
+      <div class="input-wrap">
+        <i class="ph ph-lock-simple input-icon"></i>
+        <input id="password" type="password" placeholder="Passwort" autocomplete="current-password" />
+      </div>
+    </div>
+
+    <div id="totp-area" class="form-group">
+      <p class="totp-hint"><i class="ph ph-device-mobile"></i> Gib den 6-stelligen Code aus deiner Authenticator-App ein.</p>
+      <div class="input-wrap">
+        <i class="ph ph-keyhole input-icon"></i>
+        <input id="totp-input" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+      </div>
+      <button class="btn-login" id="totp-submit" style="margin-top:10px;">
+        <i class="ph ph-sign-in"></i> Mit 2FA anmelden
+      </button>
+    </div>
+
+    <button class="btn-login" id="loginBtn">
+      <i class="ph ph-sign-in"></i> Anmelden
+    </button>
+
+    <div id="error-msg" style="display:none;">
+      <i class="ph ph-warning-circle"></i>
+      <span id="error-text"></span>
+    </div>
+  </div>
+
+  <button class="btn-incident" onclick="openIncModal()">
+    <i class="ph ph-siren"></i> Sicherheitsvorfall melden
+  </button>
+
+  <div class="login-footer">
+    ISMS Builder · ISO 27001 · BSI · NIS2 · EUCS · EU AI Act
+  </div>
+
+  <!-- ── Incident-Melde-Modal ── -->
+  <div class="inc-overlay" id="incOverlay">
+    <div class="inc-dialog" id="incDialog">
+
+      <div class="inc-header">
+        <h3><i class="ph ph-siren"></i> Sicherheitsvorfall melden</h3>
+        <button class="inc-close" onclick="closeIncModal()" title="Schließen">&times;</button>
+      </div>
+
+      <div id="incForm">
+        <div class="inc-body">
+          <div class="inc-row">
+            <div class="inc-group">
+              <label class="inc-label">Ihre E-Mail <span class="req">*</span></label>
+              <input class="inc-input" id="iEmail" type="email" placeholder="name@firma.de" />
+            </div>
+            <div class="inc-group">
+              <label class="inc-label">Gesellschaft / Standort</label>
+              <select class="inc-select" id="iEntity">
+                <option value="">– bitte wählen –</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="inc-group">
+            <label class="inc-label">Art des Vorfalls <span class="req">*</span></label>
+            <select class="inc-select" id="iType">
+              <option value="">– bitte wählen –</option>
+              <option value="malware">Malware / Schadsoftware</option>
+              <option value="phishing">Phishing / Scam / Social Engineering</option>
+              <option value="data_theft">Datenklau / Datenverlust</option>
+              <option value="ransomware">Ransomware / Erpressung</option>
+              <option value="unauthorized_access">Unbefugter Zugriff auf Systeme</option>
+              <option value="social_engineering">CEO-Fraud / Identitätsmissbrauch</option>
+              <option value="other">Sonstiges</option>
+            </select>
+          </div>
+
+          <div class="inc-group">
+            <label class="inc-label">Was ist vorgefallen? <span class="req">*</span></label>
+            <textarea class="inc-textarea" id="iDesc" placeholder="Bitte schildern Sie den Vorfall so genau wie möglich: Wann, wo, wie wurde es bemerkt?"></textarea>
+          </div>
+
+          <div class="inc-group">
+            <label class="inc-label">Welche Maßnahmen wurden bereits ergriffen?</label>
+            <textarea class="inc-textarea" id="iMeasures" placeholder="z.B. System vom Netz getrennt, Passwörter geändert, IT informiert…"></textarea>
+          </div>
+
+          <div class="inc-row">
+            <div class="inc-group">
+              <label class="inc-label">Lokaler Ansprechpartner</label>
+              <input class="inc-input" id="iContact" type="text" placeholder="Name und Telefon / E-Mail" />
+            </div>
+            <div class="inc-group">
+              <label class="inc-label">Wurde alles bereinigt?</label>
+              <select class="inc-select" id="iCleaned">
+                <option value="no">Nein – Wiedervorlage nötig</option>
+                <option value="partial">Teilweise – weitere Maßnahmen geplant</option>
+                <option value="yes">Ja – vollständig bereinigt</option>
+              </select>
+            </div>
+          </div>
+
+          <p style="font-size:11px;color:#596773;margin:0;">
+            <i class="ph ph-info"></i>
+            Diese Meldung geht direkt an das CISO-Team. Felder mit <span style="color:#e74c3c">*</span> sind Pflichtfelder.
+            Die Zuweisung zu IT oder Datenschutz sowie die Einschätzung zur Meldepflicht erfolgt durch den CISO.
+          </p>
+          <p class="inc-err" id="iErr"></p>
+        </div>
+
+        <div class="inc-footer">
+          <button class="btn-cancel-inc" onclick="closeIncModal()">Abbrechen</button>
+          <button class="btn-submit-inc" id="iSubmitBtn" onclick="submitIncident()">
+            <i class="ph ph-paper-plane-tilt"></i> Vorfall melden
+          </button>
+        </div>
+      </div>
+
+      <div class="inc-confirm" id="incConfirm" style="display:none;">
+        <div class="inc-confirm-icon"><i class="ph ph-check-circle"></i></div>
+        <h4>Vorfall gemeldet</h4>
+        <p>Ihr Vorfall wurde erfolgreich übermittelt. Das CISO-Team wird sich um die weitere Bearbeitung kümmern.</p>
+        <p>Ihr Aktenzeichen: <span class="ref" id="iRefNum">—</span></p>
+        <p style="margin-top:4px;">Bitte notieren Sie dieses Aktenzeichen für Rückfragen.</p>
+        <button class="btn-submit-inc" style="margin-top:18px;margin-left:auto;margin-right:auto;" onclick="closeIncModal()">
+          Schließen
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="login-submit.js"></script>
+  <script>
+    async function openIncModal() {
+      document.getElementById('incOverlay').classList.add('open')
+      // Gesellschaften laden und Select befüllen (einmalig)
+      const sel = document.getElementById('iEntity')
+      if (sel.options.length <= 1) {
+        try {
+          const res = await fetch('/public/entities')
+          if (res.ok) {
+            const entities = await res.json()
+            entities.forEach(e => {
+              const opt = document.createElement('option')
+              opt.value = e.name
+              opt.textContent = e.name
+              sel.appendChild(opt)
+            })
+          }
+        } catch {}
+      }
+    }
+
+    function closeIncModal() {
+      document.getElementById('incOverlay').classList.remove('open')
+      // Formular zurücksetzen
+      setTimeout(() => {
+        document.getElementById('incForm').style.display = ''
+        document.getElementById('incConfirm').style.display = 'none'
+        document.getElementById('iEmail').value = ''
+        document.getElementById('iEntity').value = ''
+        document.getElementById('iType').value = ''
+        document.getElementById('iDesc').value = ''
+        document.getElementById('iMeasures').value = ''
+        document.getElementById('iContact').value = ''
+        document.getElementById('iCleaned').value = 'no'
+        document.getElementById('iErr').style.display = 'none'
+        document.getElementById('iSubmitBtn').disabled = false
+      }, 300)
+    }
+
+    async function submitIncident() {
+      const email       = document.getElementById('iEmail').value.trim()
+      const entityName  = document.getElementById('iEntity').value.trim()
+      const incidentType= document.getElementById('iType').value
+      const description = document.getElementById('iDesc').value.trim()
+      const measuresTaken = document.getElementById('iMeasures').value.trim()
+      const localContact = document.getElementById('iContact').value.trim()
+      const cleanedUp   = document.getElementById('iCleaned').value
+      const errEl       = document.getElementById('iErr')
+
+      errEl.style.display = 'none'
+      if (!email || !incidentType || !description) {
+        errEl.textContent = 'Bitte füllen Sie alle Pflichtfelder aus (E-Mail, Art des Vorfalls, Beschreibung).'
+        errEl.style.display = 'block'
+        return
+      }
+
+      const btn = document.getElementById('iSubmitBtn')
+      btn.disabled = true
+      btn.innerHTML = '<i class="ph ph-spinner"></i> Wird gesendet…'
+
+      try {
+        const res = await fetch('/public/incident', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, entityName, incidentType, description, measuresTaken, localContact, cleanedUp })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Fehler beim Senden')
+        document.getElementById('iRefNum').textContent = data.refNumber
+        document.getElementById('incForm').style.display = 'none'
+        document.getElementById('incConfirm').style.display = ''
+      } catch (e) {
+        errEl.textContent = 'Fehler: ' + e.message
+        errEl.style.display = 'block'
+        btn.disabled = false
+        btn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Vorfall melden'
+      }
+    }
+
+    // Overlay-Klick schließt Modal
+    document.getElementById('incOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeIncModal()
+    })
+
+    // Demo-Reset-Banner anzeigen wenn Flag gesetzt
+    ;(async () => {
+      try {
+        const r = await fetch('/auth/demo-reset-done')
+        if (r.ok) {
+          const d = await r.json()
+          if (d.active) document.getElementById('demoResetBanner').classList.add('visible')
+        }
+      } catch {}
+    })()
+  </script>
+</body>
+</html>

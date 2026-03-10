@@ -1,0 +1,206 @@
+<!-- © 2026 Claude Hecker — ISMS Builder V 1.28 — AGPL-3.0 -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="ISMS Builder V 1.28">
+  <title>ISMS Builder</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Topbar ── -->
+  <header class="topbar">
+    <button class="topbar-hamburger" id="sidebarToggle" title="Sidebar ein-/ausblenden">
+      <i class="ph ph-list"></i>
+    </button>
+    <a class="topbar-brand" href="#">
+      <i class="ph ph-shield-check"></i>
+      <span>ISMS Builder</span>
+    </a>
+    <div class="topbar-center">
+      <div class="topbar-search" id="topbarSearchWrap">
+        <i class="ph ph-magnifying-glass"></i>
+        <input type="text" placeholder="Suchen…" class="topbar-search-input" id="topbarSearch" autocomplete="off" />
+        <div id="searchDropdown" class="search-dropdown" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div id="topbarFnBadges" style="display:flex;align-items:center;gap:4px;"></div>
+      <button class="topbar-2fa-hint" id="topbar2faHint" style="display:none" title="2FA nicht eingerichtet – jetzt aktivieren" onclick="loadSection('settings')">
+        <i class="ph ph-shield-warning"></i>
+        <span>2FA nicht aktiv</span>
+      </button>
+      <div class="topbar-user-wrap">
+        <button class="topbar-user-btn" id="topbarUserBtn">
+          <div class="user-avatar" id="userAvatarEl">?</div>
+          <span class="user-display-name" id="userDisplayName">—</span>
+          <i class="ph ph-caret-down"></i>
+        </button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-header">
+            <div class="user-avatar lg" id="userAvatarDropdown">?</div>
+            <div>
+              <div class="user-dropdown-name" id="userDropdownName">—</div>
+              <div class="user-dropdown-role" id="userDropdownRole">—</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="dropdownSettings">
+            <i class="ph ph-gear"></i> Einstellungen
+          </button>
+          <button class="dropdown-item dropdown-item-danger" id="dropdownLogout">
+            <i class="ph ph-sign-out"></i> Abmelden
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Hidden legacy inputs (role/user stored in localStorage via logincheck.js) ── -->
+  <select id="roleSelect" class="sr" aria-hidden="true"></select>
+  <input  id="userName"   class="sr" aria-hidden="true" />
+
+  <!-- ── App Body ── -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-create-wrap">
+        <button class="sidebar-create-btn" id="btnNewType">
+          <i class="ph ph-plus"></i>
+          <span>Erstellen</span>
+        </button>
+      </div>
+
+      <nav>
+        <div class="sidebar-section-label">Navigation</div>
+        <ul id="sectionNav" class="sidebar-nav-list"></ul>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div>
+        <div class="sidebar-section-label">Template-Typen</div>
+        <ul id="typeList" class="sidebar-nav-list"></ul>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div>
+        <div class="sidebar-section-label">Administration</div>
+        <ul class="sidebar-nav-list" id="adminNavList"></ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="editor" id="editor">
+      <!-- Editor Card (Template-Editor) -->
+      <div class="editor-card" id="editorCard">
+        <nav id="breadcrumb" class="tmpl-breadcrumb" style="display:none;"></nav>
+        <div class="editor-toolbar">
+          <span class="toolbar-tag">Typ</span>
+          <span id="selType" class="toolbar-badge">—</span>
+          <span class="toolbar-tag">Status</span>
+          <span id="statusBadge" class="toolbar-badge status-badge status-draft">—</span>
+          <span id="ownerInfo" class="owner-info"></span>
+          <span class="toolbar-spacer"></span>
+          <button id="btnChildPage" class="btn btn-secondary btn-sm" style="display:none;" onclick="openChildPageModal()">
+            <i class="ph ph-git-branch"></i> Kind-Seite
+          </button>
+          <button id="btnMovePage" class="btn btn-secondary btn-sm" style="display:none;" onclick="openMoveDialog()">
+            <i class="ph ph-arrows-out-cardinal"></i> Verschieben
+          </button>
+          <button id="btnHistory" class="btn btn-secondary btn-sm">
+            <i class="ph ph-clock-counter-clockwise"></i> Verlauf
+          </button>
+          <button id="btnControls" class="btn btn-secondary btn-sm" onclick="openControlPicker()">
+            <i class="ph ph-link"></i> SoA-Controls
+          </button>
+          <button id="btnEntities" class="btn btn-secondary btn-sm" onclick="openEntityPickerForTemplate()">
+            <i class="ph ph-buildings"></i> Gilt für
+          </button>
+          <button id="btnSave" class="btn btn-primary">
+            <i class="ph ph-floppy-disk"></i> Speichern
+          </button>
+        </div>
+        <div id="lifecycleActions" class="lifecycle-actions" style="display:none;"></div>
+        <div id="tmplControlsBar" class="tmpl-controls-bar" style="display:none;"></div>
+        <div id="tmplEntityBar" class="tmpl-entity-bar" style="display:none;"></div>
+        <div id="tmplAttachmentsBar" class="tmpl-attachments-bar" style="display:none;"></div>
+        <div class="tmpl-review-bar">
+          <i class="ph ph-calendar-check"></i>
+          <label class="tmpl-review-label" for="inputNextReview">Nächstes Review:</label>
+          <input id="inputNextReview" type="date" class="tmpl-review-input" />
+          <span id="inputNextReviewHint" class="tmpl-review-hint"></span>
+        </div>
+        <input id="inputTitle" class="form-input" placeholder="Titel des Templates" />
+        <textarea id="contentEditor" class="form-textarea" placeholder="Inhalt des Templates…"></textarea>
+      </div>
+
+      <!-- Template List -->
+      <section class="list-panel" id="listPanel">
+        <div class="list-panel-header">
+          <h3 class="list-panel-title">Vorhandene Templates</h3>
+        </div>
+        <ul id="templateList" class="template-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <!-- ── Modal: SoA Control-Picker ── -->
+  <div id="controlPickerModal" class="modal" aria-hidden="true" style="visibility:hidden;">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="ph ph-link"></i> SoA-Controls verknüpfen</h3>
+        <button class="modal-close" onclick="closeControlPicker()"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="picker-toolbar">
+          <input id="controlPickerSearch" class="form-input" placeholder="Controls suchen…" oninput="filterControlPicker()" />
+          <div id="controlPickerFwTabs" class="picker-fw-tabs"></div>
+        </div>
+        <div id="controlPickerList" class="picker-list"></div>
+      </div>
+      <div class="modal-footer">
+        <span id="controlPickerCount" class="picker-count"></span>
+        <button class="btn btn-secondary" onclick="closeControlPicker()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveControlPicker()">
+          <i class="ph ph-floppy-disk"></i> Speichern
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Neues Template ── -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Neues Template erstellen</h3>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Typ</label>
+        <select id="newType" class="select"></select>
+        <label class="form-label">Titel</label>
+        <input id="newTitle" class="input" placeholder="Titel eingeben…" />
+        <input id="newParentId" type="hidden" value="" />
+        <div id="modalParentHint" class="modal-parent-hint" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="modalCancel" class="btn btn-secondary">Abbrechen</button>
+        <button id="modalCreate" class="btn btn-primary">
+          <i class="ph ph-plus"></i> Erstellen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="/ui/logincheck.js"></script>
+  <script src="/ui/login-submit.js"></script>
+  <script src="/ui/qr2fa.js"></script>
+  <script src="/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "dsfa_seed_001",
+    "title": "DSFA: HR-Software mit Cloud-Speicherung",
+    "linkedVvtId": "vvt_seed_002",
+    "processingDescription": "Einsatz einer cloudbasierten HR-Software (SaaS) zur Verarbeitung von Mitarbeiterdaten inkl. Gehaltsdaten, Krankmeldungen und Leistungsbeurteilungen. Die Daten werden auf Servern in der EU gespeichert.",
+    "necessityAssessment": "Die Verarbeitung ist zur Erfüllung arbeitsrechtlicher Pflichten und zur effizienten HR-Verwaltung erforderlich. Eine lokale Alternative wäre unverhältnismäßig aufwändig und würde das Schutzniveau nicht erhöhen.",
+    "risks": [
+      {
+        "id": "dsfa_risk_001",
+        "description": "Unbefugter Zugriff durch Dritte (Hacking, Datenpanne beim Anbieter)",
+        "likelihood": 2,
+        "impact": 4,
+        "score": 8,
+        "mitigations": ["Vertrag mit AV-Vertrag", "TLS-Verschlüsselung", "MFA-Pflicht", "Penetrationstests beim Anbieter"]
+      },
+      {
+        "id": "dsfa_risk_002",
+        "description": "Datenverlust durch technischen Ausfall",
+        "likelihood": 2,
+        "impact": 3,
+        "score": 6,
+        "mitigations": ["Tägliche Backups", "Disaster-Recovery-Plan", "SLA mit 99,9% Verfügbarkeit"]
+      }
+    ],
+    "existingControls": "MFA, Rollenbasierte Zugriffskontrolle, verschlüsselte Übertragung (TLS 1.3), tägliche Backups, AV-Vertrag mit Anbieter.",
+    "residualRisk": "medium",
+    "dpoConsulted": true,
+    "dpoOpinion": "Die geplanten Maßnahmen werden als ausreichend bewertet. Regelmäßige Audits beim Anbieter empfohlen.",
+    "saConsultationRequired": false,
+    "decision": "proceed",
+    "decisionJustification": "Das verbleibende Risiko ist unter Berücksichtigung der implementierten Maßnahmen als akzeptabel einzustufen. Eine vorherige Konsultation der Aufsichtsbehörde ist nicht erforderlich.",
+    "applicableEntities": [],
+    "status": "review",
+    "owner": "admin",
+    "approvedBy": null,
+    "approvedAt": null,
+    "createdAt": "2025-02-01T10:00:00.000Z",
+    "updatedAt": "2025-02-01T10:00:00.000Z",
+    "createdBy": "admin"
+  }
+]

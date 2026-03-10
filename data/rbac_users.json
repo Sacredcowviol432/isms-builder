@@ -1,0 +1,67 @@
+{
+  "admin": {
+    "username": "admin",
+    "email": "admin@example.com",
+    "domain": "Global",
+    "role": "admin",
+    "passwordHash": "$2a$12$V8XzeAmCpzq6p5dKyhBHT.E7e3UW./en8L0XLfpUQ8F0tUKjbebd.",
+    "totpSecret": "XFQCNWVFCTX2DQZE6OF7AQBILFVXNPY6",
+    "sections": [
+      "Guidance",
+      "Risk",
+      "Admin",
+      "Legal",
+      "Incident",
+      "Privacy",
+      "Training",
+      "Reports",
+      "Settings"
+    ]
+  },
+  "alice": {
+    "username": "alice",
+    "email": "alice@it.example",
+    "domain": "IT",
+    "role": "dept_head",
+    "passwordHash": "$2a$12$Ipt22Y0IbWf2Thszb7ftoe36FQ85A2dsK.93a5rBuc.563SZnKUty",
+    "totpSecret": "",
+    "sections": [
+      "Guidance",
+      "Risk",
+      "Incident"
+    ]
+  },
+  "bob": {
+    "username": "bob",
+    "email": "bob@hr.example",
+    "domain": "HR",
+    "role": "reader",
+    "passwordHash": "$2a$12$KKF.RmVsL5a4MbR31qN0tO7/wJEm2R1jHcv2qYA36.UCYK3IJwc5q",
+    "totpSecret": "",
+    "sections": []
+  },
+  "ciso": {
+    "username": "ciso",
+    "email": "ciso@example.com",
+    "domain": "Global",
+    "role": "contentowner",
+    "functions": [
+      "ciso"
+    ],
+    "passwordHash": "$2a$12$0ukS19emO09dsLWviE/NzOnEWQIqCaVkmHPT/FPKiCdrDhr28mIDa",
+    "totpSecret": "M525IVTX6QWVMZXLOYIDJ3UBAZNDH4KL",
+    "sections": []
+  },
+  "dsb": {
+    "username": "dsb",
+    "email": "dsb@example.com",
+    "domain": "Global",
+    "role": "contentowner",
+    "functions": [
+      "dso"
+    ],
+    "passwordHash": "$2a$12$BIrlbtukFfEIYhKB/HGaruritY85dmbnXtzqyzTTxS3B8f54Rg1cm",
+    "totpSecret": "",
+    "sections": []
+  }
+}

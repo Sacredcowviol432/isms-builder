@@ -1,0 +1,15 @@
+node_modules
+.git
+.env
+*.log
+.server.pid
+.server.log
+data
+docs
+patches
+tools
+session*.md
+README.md
+Dockerfile
+docker-compose*.yml
+*.tar.gz

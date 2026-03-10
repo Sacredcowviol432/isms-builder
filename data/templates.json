@@ -1,0 +1,145 @@
+[
+  {
+    "id": "Policy_1772735624723",
+    "type": "Policy",
+    "language": "de",
+    "title": "Test Policy",
+    "content": "Inhalt",
+    "version": 1,
+    "status": "approved",
+    "owner": "admin",
+    "reviewDate": "2026-03-05T18:33:44.731Z",
+    "createdAt": "2026-03-05T18:33:44.723Z",
+    "updatedAt": "2026-03-05T18:33:44.731Z",
+    "history": [
+      {
+        "version": 1,
+        "content": "Inhalt",
+        "updatedAt": "2026-03-05T18:33:44.723Z"
+      }
+    ],
+    "statusHistory": [
+      {
+        "status": "draft",
+        "changedBy": "admin",
+        "changedAt": "2026-03-05T18:33:44.723Z"
+      },
+      {
+        "status": "review",
+        "changedBy": "alice",
+        "changedAt": "2026-03-05T18:33:44.725Z"
+      },
+      {
+        "status": "approved",
+        "changedBy": "admin",
+        "changedAt": "2026-03-05T18:33:44.731Z"
+      }
+    ]
+  },
+  {
+    "id": "Procedure_1772735633349",
+    "type": "Procedure",
+    "language": "de",
+    "title": "Test",
+    "content": "",
+    "version": 1,
+    "status": "review",
+    "owner": "bob",
+    "reviewDate": null,
+    "createdAt": "2026-03-05T18:33:53.349Z",
+    "updatedAt": "2026-03-05T18:33:53.351Z",
+    "history": [
+      {
+        "version": 1,
+        "content": "",
+        "updatedAt": "2026-03-05T18:33:53.349Z"
+      }
+    ],
+    "statusHistory": [
+      {
+        "status": "draft",
+        "changedBy": "bob",
+        "changedAt": "2026-03-05T18:33:53.349Z"
+      },
+      {
+        "status": "review",
+        "changedBy": "alice",
+        "changedAt": "2026-03-05T18:33:53.351Z"
+      }
+    ]
+  },
+  {
+    "id": "Risk_1772801649130",
+    "type": "Risk",
+    "language": "de",
+    "title": "Haftungsrisiko",
+    "content": "",
+    "version": 1,
+    "status": "approved",
+    "owner": null,
+    "reviewDate": "2026-03-06T12:54:38.651Z",
+    "createdAt": "2026-03-06T12:54:09.130Z",
+    "updatedAt": "2026-03-06T12:54:38.651Z",
+    "history": [
+      {
+        "version": 1,
+        "content": "",
+        "updatedAt": "2026-03-06T12:54:09.130Z"
+      }
+    ],
+    "statusHistory": [
+      {
+        "status": "draft",
+        "changedBy": "system",
+        "changedAt": "2026-03-06T12:54:09.130Z"
+      },
+      {
+        "status": "review",
+        "changedBy": "admin",
+        "changedAt": "2026-03-06T12:54:33.205Z"
+      },
+      {
+        "status": "approved",
+        "changedBy": "admin",
+        "changedAt": "2026-03-06T12:54:35.489Z"
+      },
+      {
+        "status": "review",
+        "changedBy": "admin",
+        "changedAt": "2026-03-06T12:54:36.738Z"
+      },
+      {
+        "status": "approved",
+        "changedBy": "admin",
+        "changedAt": "2026-03-06T12:54:38.651Z"
+      }
+    ]
+  },
+  {
+    "id": "SoA_1772803046851",
+    "type": "SoA",
+    "language": "de",
+    "title": "mir egal",
+    "content": "",
+    "version": 1,
+    "status": "draft",
+    "owner": null,
+    "reviewDate": null,
+    "createdAt": "2026-03-06T13:17:26.852Z",
+    "updatedAt": "2026-03-06T13:17:26.852Z",
+    "history": [
+      {
+        "version": 1,
+        "content": "",
+        "updatedAt": "2026-03-06T13:17:26.852Z"
+      }
+    ],
+    "statusHistory": [
+      {
+        "status": "draft",
+        "changedBy": "system",
+        "changedAt": "2026-03-06T13:17:26.852Z"
+      }
+    ]
+  }
+]

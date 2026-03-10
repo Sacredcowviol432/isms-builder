@@ -1,0 +1,34 @@
+[
+  {
+    "id": "entity_holding",
+    "name": "Holding GmbH",
+    "type": "holding",
+    "parent": null,
+    "shortCode": "HLD",
+    "active": true
+  },
+  {
+    "id": "entity_sub1",
+    "name": "Gesellschaft Alpha GmbH",
+    "type": "subsidiary",
+    "parent": "entity_holding",
+    "shortCode": "ALP",
+    "active": true
+  },
+  {
+    "id": "entity_sub2",
+    "name": "Gesellschaft Beta GmbH",
+    "type": "subsidiary",
+    "parent": "entity_holding",
+    "shortCode": "BET",
+    "active": true
+  },
+  {
+    "id": "entity_sub3",
+    "name": "Gesellschaft Gamma GmbH",
+    "type": "subsidiary",
+    "parent": "entity_holding",
+    "shortCode": "GAM",
+    "active": true
+  }
+]

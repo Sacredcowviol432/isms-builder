@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────────
+# ISMS Builder – Dockerfile
+# Multi-stage: build (npm ci) → runtime (node:lts-alpine)
+#
+# Daten (JSON + Uploads) werden NICHT ins Image gebacken.
+# Sie müssen als Bind-Mount bereitgestellt werden:
+#   docker compose up   →  ./data:/app/data  (siehe docker-compose.yml)
+# ─────────────────────────────────────────────────────────────────
+
+# ── Stage 1: install dependencies ────────────────────────────────
+FROM node:lts-alpine AS deps
+WORKDIR /app
+
+# Copy only manifests first (better layer caching)
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# ── Stage 2: runtime image ────────────────────────────────────────
+FROM node:lts-alpine AS runtime
+WORKDIR /app
+
+# Non-root user for security
+RUN addgroup -S isms && adduser -S isms -G isms
+
+# Copy installed modules from build stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application source (kein data/ – wird als Bind-Mount gemountet)
+COPY server ./server
+COPY ui     ./ui
+COPY package.json ./
+COPY docker-entrypoint.sh ./
+
+RUN chmod +x docker-entrypoint.sh \
+    && chown -R isms:isms /app
+
+USER isms
+
+# Environment defaults (override via .env.docker oder docker run -e)
+ENV NODE_ENV=production \
+    PORT=3000 \
+    JWT_EXPIRES_IN=8h \
+    DEV_HEADER_AUTH=false \
+    STORAGE_BACKEND=json
+
+EXPOSE 3000
+
+# Healthcheck (HTTP; bei SSL auf https anpassen oder wget-Flag setzen)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ui/login.html || exit 1
+
+# Entrypoint erstellt fehlende Unterverzeichnisse und startet den Server
+ENTRYPOINT ["./docker-entrypoint.sh"]

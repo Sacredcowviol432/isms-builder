@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets — NEVER commit
+.env
+.env.local
+.env.production
+
+# SSL certificates — NEVER commit
+ssl/
+
+# Runtime / generated
+*.log
+logs/
+dist/
+build/
+
+# Backups created by backup-and-deploy.sh
+data.bak.*
+*.bak
+*.bak.*
+
+# Sensitive runtime data (generated, not needed for demo)
+data/audit-log.json
+data/embeddings.json
+data/rbac_users.json.bak*
+data/.demo_reset_done
+
+# Uploaded binary files (not tracked in git)
+data/template-files/
+data/guidance/files/
+data/bcm-files/
+data/governance-files/
+data/legal/
+
+# SQLite database (generated from JSON seed on first run)
+data/isms.db
+data/isms.db-shm
+data/isms.db-wal
+
+# Dev tools
+.opencode
+session*.md
+.claude/
+tmp/
+.DS_Store
+Thumbs.db
+
+# Puppeteer cache
+.local-chromium/

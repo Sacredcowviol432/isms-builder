@@ -1,0 +1,131 @@
+{
+  "orgName": "",
+  "orgShort": "",
+  "ismsScope": "",
+  "logoText": "",
+  "require2FA": false,
+  "aiEnabled": false,
+  "aiOllamaUrl": "",
+  "aiEmbedModel": "",
+  "cisoName": "",
+  "cisoEmail": "",
+  "gdpoName": "",
+  "gdpoEmail": "",
+  "icsContact": "",
+  "cisoSettings": {
+    "escalationEmail": "",
+    "incidentResponseSLA": 24,
+    "reportableThreshold": "high",
+    "reportableTypes": [
+      "ransomware",
+      "data_theft",
+      "unauthorized_access"
+    ]
+  },
+  "gdpoSettings": {
+    "dsarDeadlineDays": 30,
+    "dsarExtendedDays": 90,
+    "timer72hEnabled": true,
+    "supervisoryAuthority": "",
+    "supervisoryContact": "",
+    "dsarDefaultResponse": ""
+  },
+  "modules": {
+    "soa": true,
+    "guidance": true,
+    "goals": true,
+    "risk": true,
+    "legal": true,
+    "incident": true,
+    "gdpr": true,
+    "training": true,
+    "reports": true,
+    "calendar": true,
+    "assets": true,
+    "governance": true,
+    "bcm": true,
+    "suppliers": true
+  },
+  "soaFrameworks": {
+    "ISO27001": true,
+    "BSI": true,
+    "NIS2": true,
+    "EUCS": true,
+    "EUAI": true,
+    "ISO9000": true,
+    "ISO9001": true,
+    "CRA": true
+  },
+  "icsSettings": {
+    "otResponsible": "",
+    "otResponsibleEmail": "",
+    "otScope": "",
+    "otStandard": "iec62443",
+    "otNis2Sector": "",
+    "otKritisRelevant": false,
+    "otNetworkSegmentation": "planned",
+    "otPatchCycleWeeks": 12,
+    "otMaintenanceWindow": "",
+    "otEmergencyContact": ""
+  },
+  "revisionSettings": {
+    "revResponsible": "",
+    "revResponsibleEmail": "",
+    "revScope": "",
+    "revCycleMonths": 12,
+    "revLastAuditDate": "",
+    "revNextAuditDate": "",
+    "revReportsTo": "gf",
+    "revExternalSupport": ""
+  },
+  "smtpSettings": {
+    "host": "",
+    "port": 587,
+    "secure": false,
+    "user": "",
+    "pass": "",
+    "from": ""
+  },
+  "navOrder": [
+    "dashboard",
+    "soa",
+    "guidance",
+    "goals",
+    "risk",
+    "legal",
+    "incident",
+    "gdpr",
+    "training",
+    "assets",
+    "governance",
+    "bcm",
+    "suppliers",
+    "reports",
+    "calendar",
+    "settings",
+    "admin"
+  ],
+  "emailNotifications": {
+    "enabled": false,
+    "adminEmail": "",
+    "risks": true,
+    "dsar": true,
+    "gdprIncidents": true,
+    "deletionLog": true,
+    "bcm": true,
+    "contracts": true,
+    "templateReview": true,
+    "supplierAudits": true
+  },
+  "qmSettings": {
+    "qmResponsible": "",
+    "qmResponsibleEmail": "",
+    "qmScope": "",
+    "qmStandard": "iso9001",
+    "qmCertBody": "",
+    "qmCertValidUntil": "",
+    "qmLastAuditDate": "",
+    "qmNextAuditDate": "",
+    "qmRecertDate": ""
+  }
+}
