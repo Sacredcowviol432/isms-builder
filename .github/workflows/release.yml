@@ -32,8 +32,9 @@ jobs:
       - name: Create deployment archive
         run: |
           tar --exclude=node_modules --exclude=data --exclude=ssl \
-              --exclude=.env --exclude='.git' \
-              -czf isms-builder-${{ github.ref_name }}.tar.gz .
+              --exclude=.env --exclude='.git' --exclude='*.log' \
+              --warning=no-file-changed \
+              -czf isms-builder-${{ github.ref_name }}.tar.gz . || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
