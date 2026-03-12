@@ -1,4 +1,4 @@
-<!-- © 2026 Claude Hecker — ISMS Builder V 1.31.80 — AGPL-3.0 -->
+<!-- © 2026 Claude Hecker — ISMS Builder V 1.32.0 — AGPL-3.0 -->
 ![ISMS Builder Banner](isms-builder-banner.png)
 # ISMS Builder
 
@@ -236,8 +236,8 @@ Contributions are very welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 | ✅ Done | SQLite backend, Docker, CI/CD |
 | ✅ Done | GDPR deletion log email alerts |
 | ✅ Done | Multilingual demo bundles (DE / EN / FR / NL) |
-| ✅ Done | Audit Findings module with action plans (V 1.31.80) |
-| ✅ Done | FR/NL Guidance translations + admin language configuration (V 1.31.80) |
+| ✅ Done | Audit Findings module with action plans (V 1.32.0) |
+| ✅ Done | FR/NL Guidance translations + admin language configuration (V 1.32.0) |
 | 🔜 Next | PostgreSQL backend |
 | 🔜 Next | Scanner → Risk draft (nmap/OpenVAS XML import) |
 | 🔜 Next | Audit-log anomaly detection (LLM batch) |

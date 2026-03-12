@@ -1,4 +1,4 @@
-// © 2026 Claude Hecker — ISMS Builder V 1.31.80 — AGPL-3.0
+// © 2026 Claude Hecker — ISMS Builder V 1.32.0 — AGPL-3.0
 'use strict'
 const { createTestDataDir, removeTestDataDir } = require('./setup/testEnv')
 

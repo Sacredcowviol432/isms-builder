@@ -1035,6 +1035,7 @@ function renderReportsTabContent(container) {
       <button id="reportRunBtn" class="btn btn-primary"><i class="ph ph-play"></i> Create Report</button>
       <button class="btn btn-secondary" onclick="exportReportJson()"><i class="ph ph-download-simple"></i> JSON</button>
       <button class="btn btn-secondary" onclick="exportReportCsv()"><i class="ph ph-file-csv"></i> CSV</button>
+      <button class="btn btn-secondary" onclick="exportReportPdf()"><i class="ph ph-file-pdf"></i> PDF</button>
     </div>
     <div id="reportResult" class="report-result"></div>
   `
@@ -1223,16 +1224,18 @@ function renderReportResult(type, data, el) {
         ${data.overdueActions > 0 ? `<div class="report-kpi"><span class="report-kpi-val red">${data.overdueActions}</span><span class="report-kpi-label">Overdue Actions</span></div>` : ''}
       </div>
       <table class="report-table">
-        <thead><tr><th>Ref</th><th>Title</th><th>Severity</th><th>Status</th><th>Auditor</th><th>Area</th><th>Open Actions</th></tr></thead>
+        <thead><tr><th>Ref</th><th>Title</th><th>Severity</th><th>Status</th><th>Auditor</th><th>Area</th><th>Observation</th><th>Requirement</th><th>Open Actions</th></tr></thead>
         <tbody>${(data.findings||[]).map(f => {
           const openActs = (f.actions||[]).filter(a => a.status !== 'done').length
           return `<tr>
             <td class="picker-id">${f.ref}</td>
-            <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(f.title)}">${escHtml(f.title)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(f.title)}">${escHtml(f.title)}</td>
             <td><span style="color:${sevColor[f.severity]||'#888'};font-weight:600">${f.severity}</span></td>
             <td><span style="color:${stColor[f.status]||'#888'}">${f.status.replace(/_/g,' ')}</span></td>
             <td>${escHtml(f.auditor||'—')}</td>
-            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(f.auditedArea||'—')}</td>
+            <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(f.auditedArea||'—')}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(f.observation||'')}">${escHtml(f.observation||'—')}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(f.requirement||'')}">${escHtml(f.requirement||'—')}</td>
             <td style="text-align:center;color:${openActs>0?'#fb923c':'var(--text-muted)'}">${openActs}</td>
           </tr>`
         }).join('')}
@@ -1270,6 +1273,37 @@ function exportReportJson() {
   a.download = `isms-report-${_activeReportType}-${new Date().toISOString().slice(0,10)}.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function exportReportPdf() {
+  const resultEl = dom('reportResult')
+  if (!resultEl || !_lastReportData) return alert('Please generate a report first.')
+  const title = `ISMS Report — ${(_activeReportType||'').replace(/_/g,' ')} — ${new Date().toLocaleDateString('en-GB')}`
+  const win = window.open('', '_blank')
+  if (!win) return alert('Pop-up blocked. Please allow pop-ups for this site.')
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
+      h1   { font-size: 16px; margin-bottom: 4px; }
+      .sub { font-size: 11px; color: #666; margin-bottom: 16px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; font-size: 11px; }
+      th { background: #f0f0f0; font-weight: bold; }
+      .kpi-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+      .kpi { background: #f5f5f5; border-radius: 6px; padding: 8px 14px; text-align: center; min-width: 70px; }
+      .kpi-val { font-size: 20px; font-weight: bold; display: block; }
+      .kpi-lbl { font-size: 10px; color: #666; }
+      @media print { body { margin: 0; } }
+    </style>
+  </head><body>
+    <h1>${title}</h1>
+    <div class="sub">Generated: ${new Date().toLocaleString('en-GB')} · ISMS Builder</div>
+    ${resultEl.innerHTML}
+    <script>window.onload = () => { window.print() }<\/script>
+  </body></html>`)
+  win.document.close()
 }
 
 // ── Findings UI ───────────────────────────────────────────────────────────────

@@ -2218,7 +2218,7 @@ if (req.path.startsWith('/vendor/')) return uiStatic(req, res, next)
 
 ---
 
-## 46. FR/NL Guidance-Übersetzungen (V 1.31.80)
+## 46. FR/NL Guidance-Übersetzungen (V 1.32.0)
 
 ### Übersicht
 
@@ -2270,7 +2270,7 @@ Nachher: `['de', 'en', 'fr', 'nl'].includes(l) ? l : 'en'` — alle vier Sprache
 
 ---
 
-## 47. Sprach-Konfiguration (Admin, V 1.31.80)
+## 47. Sprach-Konfiguration (Admin, V 1.32.0)
 
 ### Zweck
 
@@ -2326,7 +2326,7 @@ Der `/auth/language-config`-Endpunkt ist bewusst **öffentlich** (kein Login), d
 
 ---
 
-## 48. Audit-Feststellungen / Findings-Modul (V 1.31.80)
+## 48. Audit-Feststellungen / Findings-Modul (V 1.32.0)
 
 ### Zweck
 
