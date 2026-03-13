@@ -304,3 +304,7 @@ This program is free software licensed under the
 
 If you run a modified version as a network service, you must make the
 complete source code available to users of that service (AGPL §13).
+
+This project includes third-party components under MIT, BSD-2-Clause and
+Apache-2.0 licenses. See [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md)
+for full attribution and license texts.
