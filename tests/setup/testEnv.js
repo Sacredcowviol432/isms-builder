@@ -48,6 +48,8 @@ function createTestDataDir() {
   writeJson(path.join(dir, 'custom-lists.json'),     {})
   writeJson(path.join(dir, 'governance.json'),       { reviews: [], actions: [], meetings: [] })
   writeJson(path.join(dir, 'findings.json'),         [])
+  writeJson(path.join(dir, 'policy-distributions.json'), [])
+  writeJson(path.join(dir, 'policy-acks.json'),          [])
   writeJson(path.join(dir, 'bcm.json'),              { bia: [], plans: [], exercises: [] })
   writeJson(path.join(dir, 'org-settings.json'),     { companyName: 'Test GmbH', ciso: 'Test CISO', gdpo: 'Test GDPO' })
 

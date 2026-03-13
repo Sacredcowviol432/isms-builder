@@ -143,6 +143,9 @@ const DEFAULTS = {
     supplierAudits:  true,    // Lieferanten-Audits überfällig / ≤ 14 Tage → cisoEmail
   },
 
+  // Richtlinien-Bestätigung (Policy Acknowledgement)
+  policyAckMode: 'manual',   // 'email_campaign' | 'manual' | 'distribution_only'
+
   // Qualitätsmanagement
   qmSettings: {
     qmResponsible:          '',       // QMB – Qualitätsmanagementbeauftragter

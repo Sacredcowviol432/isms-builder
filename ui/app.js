@@ -43,6 +43,7 @@ const SECTION_META = [
   { id:'suppliers',  labelKey:'nav_suppliers',  label:'Supply Chain',       icon:'ph-truck',               minRole:'contentowner', functions:['ciso','revision'] },
   { id:'bcm',        labelKey:'nav_bcm',        label:'Business Continuity',icon:'ph-heartbeat',           minRole:'contentowner', functions:['ciso','revision'] },
   { id:'governance', labelKey:'nav_governance', label:'Governance',         icon:'ph-chalkboard-teacher',  minRole:'contentowner', functions:['ciso','dso','revision','qmb'] },
+  { id:'policy-acks', labelKey:'nav_policyAcks', label:'Richtlinien-Bestätigungen', icon:'ph-check-circle', minRole:'contentowner', functions:['ciso','revision','qmb'] },
   { id:'reports',    labelKey:'nav_reports',    label:'Reports',            icon:'ph-chart-line',          minRole:'contentowner', functions:['ciso','dso','revision','qmb'] },
   { id:'settings',   labelKey:'nav_settings',   label:'Settings',           icon:'ph-gear',                minRole:'contentowner', functions:['ciso','dso','revision','qmb'] },
   // ── Nur Admin ────────────────────────────────────────────────────────────
@@ -930,7 +931,7 @@ function loadSection(sectionId){
 }
 
 function removeAllDynamicPanels() {
-  ['dashboardContainer','soaContainer','guidanceContainer','riskContainer','calendarContainer','adminPanelContainer','settingsPanelContainer','reportsContainer','gdprContainer','trainingContainer','incidentContainer','legalContainer','goalsContainer','assetsContainer','governanceContainer','bcmContainer','suppliersContainer'].forEach(id => {
+  ['dashboardContainer','soaContainer','guidanceContainer','riskContainer','calendarContainer','adminPanelContainer','settingsPanelContainer','reportsContainer','gdprContainer','trainingContainer','incidentContainer','legalContainer','goalsContainer','assetsContainer','governanceContainer','bcmContainer','suppliersContainer','policyAcksContainer'].forEach(id => {
     dom(id)?.remove()
   })
 }
@@ -2102,6 +2103,11 @@ function renderSectionContent(sectionId){
     listPanel.style.display = 'none'
     renderSuppliers()
     return
+  } else if (sectionId === 'policy-acks') {
+    editorCard.style.display = 'none'
+    listPanel.style.display = 'none'
+    renderPolicyAcks()
+    return
   } else {
     dom('inputTitle').value = `Section: ${sectionId}`
     dom('contentEditor').value = `Content for ${sectionId} – to be filled in future iterations.`
@@ -2888,9 +2894,9 @@ async function renderDashboard() {
 
   container.innerHTML = '<div class="dashboard-loading">Loading Dashboard…</div>'
 
-  let data, soaSummary, riskSummary, gdprDash, trainSummary, legalSummary, calEvents, goalsSummary, assetSummary, govSummary, bcmSummary, supplierSummary, findingsSummary, reviewPending
+  let data, soaSummary, riskSummary, gdprDash, trainSummary, legalSummary, calEvents, goalsSummary, assetSummary, govSummary, bcmSummary, supplierSummary, findingsSummary, reviewPending, ackSummary
   try {
-    const [dashRes, soaRes, riskRes, gdprRes, trainRes, legalRes, calRes, goalsRes, assetRes, govRes, bcmRes, supplierRes, findRes, reviewRes] = await Promise.all([
+    const [dashRes, soaRes, riskRes, gdprRes, trainRes, legalRes, calRes, goalsRes, assetRes, govRes, bcmRes, supplierRes, findRes, reviewRes, ackRes] = await Promise.all([
       fetch('/dashboard',                                                                       { headers: apiHeaders('reader') }),
       MODULE_CONFIG.soa        ? fetch('/soa/summary',          { headers: apiHeaders('reader') }) : Promise.resolve(null),
       MODULE_CONFIG.risk       ? fetch('/risks/summary',        { headers: apiHeaders('reader') }) : Promise.resolve(null),
@@ -2905,6 +2911,7 @@ async function renderDashboard() {
       MODULE_CONFIG.suppliers  ? fetch('/suppliers/summary',    { headers: apiHeaders('reader') }) : Promise.resolve(null),
       fetch('/findings/summary',                                { headers: apiHeaders('reader') }),
       MODULE_CONFIG.risk       ? fetch('/risks/review-pending', { headers: apiHeaders('reader') }) : Promise.resolve(null),
+      fetch('/distributions/summary',                           { headers: apiHeaders('reader') }),
     ])
     if (!dashRes.ok) throw new Error('API error')
     data             = await dashRes.json()
@@ -2921,6 +2928,7 @@ async function renderDashboard() {
     supplierSummary  = supplierRes?.ok ? await supplierRes.json()  : null
     findingsSummary  = findRes?.ok     ? await findRes.json()      : null
     reviewPending    = reviewRes?.ok   ? await reviewRes.json()    : []
+    ackSummary       = ackRes?.ok      ? await ackRes.json()       : null
   } catch (e) {
     if (container.isConnected)
       container.innerHTML = '<div class="dashboard-error">Dashboard konnte nicht geladen werden.</div>'
@@ -3198,6 +3206,22 @@ async function renderDashboard() {
           ${findingsSummary.overdueActions || 0}
         </div>
         <div class="kpi-label">Actions Overdue</div>
+      </div>
+    </div>` : ''}
+
+    <!-- KPI Row: Policy Acknowledgements -->
+    ${ackSummary ? `
+    <div class="dash-section-title" style="margin:16px 0 8px"><i class="ph ph-check-circle"></i> Richtlinien-Bestätigungen</div>
+    <div class="dashboard-grid" style="margin-bottom:0">
+      <div class="dash-card kpi dash-link" data-nav="policy-acks">
+        <div class="kpi-value">${ackSummary.activeDistributions || 0}</div>
+        <div class="kpi-label">Aktive Verteilrunden</div>
+      </div>
+      <div class="dash-card kpi dash-link" data-nav="policy-acks">
+        <div class="kpi-value" style="color:${(ackSummary.pendingAcks||0)>0?'#fbbf24':'var(--success-text)'}">
+          ${ackSummary.pendingAcks || 0}
+        </div>
+        <div class="kpi-label">Ausstehende Bestätigungen</div>
       </div>
     </div>` : ''}
 
@@ -13308,6 +13332,416 @@ async function deleteSupplier(id) {
   renderSuppliers()
 }
 
+// ════════════════════════════════════════════════════════════
+// POLICY ACKNOWLEDGEMENTS
+// ════════════════════════════════════════════════════════════
+
+let _ackTab = 'list'  // 'list' | 'new'
+
+async function renderPolicyAcks() {
+  const main = document.querySelector('main') || document.body
+  let container = dom('policyAcksContainer')
+  if (!container) {
+    container = document.createElement('div')
+    container.id = 'policyAcksContainer'
+    container.className = 'training-container'
+    main.appendChild(container)
+  }
+
+  // Modus aus Org-Settings laden
+  let mode = 'manual'
+  try {
+    const cfg = await fetch('/admin/ack-settings', { headers: apiHeaders() }).then(r => r.json())
+    mode = cfg.policyAckMode || 'manual'
+  } catch {}
+
+  const modeLabels = { email_campaign: 'E-Mail-Kampagne', manual: 'Manuell / CSV', distribution_only: 'Nur Verteilung dokumentieren' }
+  const modeIcons  = { email_campaign: 'ph-envelope', manual: 'ph-pencil', distribution_only: 'ph-file-text' }
+
+  container.innerHTML = `
+    <div class="reports-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <h2 class="reports-title"><i class="ph ph-check-circle"></i> Richtlinien-Bestätigungen</h2>
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)">
+        <i class="ph ${modeIcons[mode]}"></i>
+        Modus: <strong>${modeLabels[mode] || mode}</strong>
+        ${getCurrentRole() === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="renderPolicyAckSettings()"><i class="ph ph-gear"></i> Modus ändern</button>` : ''}
+      </div>
+    </div>
+    <div class="training-tab-bar" style="margin-bottom:16px">
+      <button class="training-tab${_ackTab==='list'?' active':''}" onclick="_ackTab='list';renderPolicyAcks()">
+        <i class="ph ph-list-checks"></i> Verteilrunden
+      </button>
+      <button class="training-tab${_ackTab==='new'?' active':''}" onclick="_ackTab='new';renderPolicyAcks()">
+        <i class="ph ph-plus-circle"></i> Neue Verteilrunde
+      </button>
+    </div>
+    <div id="policyAcksContent"></div>
+  `
+
+  const content = dom('policyAcksContent')
+  if (_ackTab === 'new') {
+    _renderNewDistributionForm(content, mode)
+  } else {
+    await _renderDistributionList(content, mode)
+  }
+}
+
+async function _renderDistributionList(container, mode) {
+  container.innerHTML = `<div class="loading-spinner" style="padding:40px;text-align:center"><i class="ph ph-spinner" style="font-size:32px;animation:spin 1s linear infinite"></i></div>`
+  let dists = []
+  try { dists = await fetch('/distributions', { headers: apiHeaders() }).then(r => r.json()) } catch {}
+
+  if (!Array.isArray(dists) || dists.length === 0) {
+    container.innerHTML = `<div class="empty-state"><i class="ph ph-check-circle" style="font-size:48px;color:var(--text-muted)"></i><p>Noch keine Verteilrunden vorhanden.</p><button class="btn btn-primary" onclick="_ackTab='new';renderPolicyAcks()"><i class="ph ph-plus"></i> Erste Verteilrunde anlegen</button></div>`
+    return
+  }
+
+  const statusLabel  = { active: 'Aktiv', completed: 'Abgeschlossen', expired: 'Abgelaufen' }
+  const statusColor  = { active: '#4ade80', completed: '#60a5fa', expired: '#f87171' }
+
+  container.innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead><tr>
+        <th>Richtlinie</th><th>Zielgruppe</th><th>Frist</th><th>Fortschritt</th><th>Status</th><th>Erstellt</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${dists.map(d => {
+          const pct = d.stats.total > 0 ? Math.round(d.stats.confirmed / d.stats.total * 100) : (d.mode === 'distribution_only' ? 100 : 0)
+          const progressHtml = d.mode === 'distribution_only'
+            ? `<span style="color:var(--text-muted);font-size:12px">–</span>`
+            : `<div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:var(--bg-tertiary);border-radius:4px;height:8px;min-width:80px">
+                  <div style="width:${pct}%;background:#4ade80;height:8px;border-radius:4px"></div>
+                </div>
+                <span style="font-size:12px;color:var(--text-muted)">${d.stats.confirmed}/${d.stats.total}</span>
+              </div>`
+          return `<tr>
+            <td><strong>${escHtml(d.templateTitle)}</strong><br><span style="font-size:12px;color:var(--text-muted)">${escHtml(d.templateType)} · V${d.templateVersion}</span></td>
+            <td>${escHtml(d.targetGroup || '–')}</td>
+            <td>${d.dueDate ? new Date(d.dueDate).toLocaleDateString('de-DE') : '–'}</td>
+            <td style="min-width:140px">${progressHtml}</td>
+            <td><span class="status-badge" style="background:${statusColor[d.status]||'#666'}20;color:${statusColor[d.status]||'#666'};border:1px solid ${statusColor[d.status]||'#666'}40">${statusLabel[d.status]||d.status}</span></td>
+            <td style="font-size:12px;color:var(--text-muted)">${new Date(d.createdAt).toLocaleDateString('de-DE')}</td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-secondary btn-sm" onclick="openDistributionDetail('${d.id}')"><i class="ph ph-eye"></i></button>
+              ${d.mode === 'email_campaign' ? `<button class="btn btn-secondary btn-sm" title="Erinnerung senden" onclick="sendAckReminder('${d.id}')"><i class="ph ph-envelope"></i></button>` : ''}
+              <a href="/distributions/${d.id}/export/csv" class="btn btn-secondary btn-sm" title="CSV-Export"><i class="ph ph-download-simple"></i></a>
+              ${getCurrentRole() === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteDistribution('${d.id}')"><i class="ph ph-trash"></i></button>` : ''}
+            </td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>
+  `
+}
+
+function _renderNewDistributionForm(container, mode) {
+  const modeInfo = {
+    email_campaign:    'E-Mails mit Token-Link werden verschickt. Mitarbeiter bestätigen ohne Login.',
+    manual:            'Bestätigungen werden manuell eingetragen oder per CSV importiert.',
+    distribution_only: 'Es werden keine Einzelbestätigungen erfasst — nur die Verteilung dokumentiert.',
+  }
+
+  container.innerHTML = `
+    <div class="training-form-page">
+      <div class="form-section-header"><h3><i class="ph ph-plus-circle"></i> Neue Verteilrunde anlegen</h3></div>
+
+      <div class="info-box" style="margin-bottom:20px">
+        <i class="ph ph-info"></i> <strong>Aktiver Modus:</strong> ${modeInfo[mode] || mode}
+      </div>
+
+      <label class="form-label">Richtlinie (nur freigegebene) <span style="color:#f87171">*</span></label>
+      <select id="ackTemplateId" class="select" style="margin-bottom:16px">
+        <option value="">Wird geladen…</option>
+      </select>
+
+      <label class="form-label">Zielgruppe / Beschreibung</label>
+      <input type="text" id="ackTargetGroup" class="form-input" placeholder="z.B. Alle Mitarbeiter, IT-Abteilung…" style="margin-bottom:16px"/>
+
+      <label class="form-label">Frist (optional)</label>
+      <input type="date" id="ackDueDate" class="form-input" style="margin-bottom:16px"/>
+
+      ${mode === 'email_campaign' ? `
+      <label class="form-label">E-Mail-Adressen <span style="color:var(--text-muted);font-weight:400">(eine pro Zeile oder kommagetrennt)</span></label>
+      <textarea id="ackEmailList" class="form-textarea" rows="6" placeholder="alice@firma.de&#10;bob@firma.de&#10;carol@firma.de"></textarea>
+      ` : ''}
+
+      <label class="form-label">Notizen</label>
+      <textarea id="ackNotes" class="form-textarea" rows="3" placeholder="Optionale Notizen zu dieser Verteilrunde" style="margin-bottom:20px"></textarea>
+
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="saveNewDistribution()">
+          <i class="ph ph-paper-plane-tilt"></i> ${mode === 'email_campaign' ? 'Anlegen & E-Mails vorbereiten' : 'Verteilrunde anlegen'}
+        </button>
+        <button class="btn btn-secondary" onclick="_ackTab='list';renderPolicyAcks()">Abbrechen</button>
+      </div>
+    </div>
+  `
+
+  // Approved templates laden
+  fetch('/templates?status=approved', { headers: apiHeaders() })
+    .then(r => r.json())
+    .then(templates => {
+      const sel = dom('ackTemplateId')
+      if (!sel) return
+      const approved = Array.isArray(templates) ? templates.filter(t => t.status === 'approved') : []
+      sel.innerHTML = `<option value="">Richtlinie wählen…</option>` +
+        approved.map(t => `<option value="${t.id}">${escHtml(t.title)} (${escHtml(t.type)})</option>`).join('')
+    }).catch(() => {})
+}
+
+async function saveNewDistribution() {
+  const templateId  = dom('ackTemplateId')?.value
+  const targetGroup = dom('ackTargetGroup')?.value?.trim() || ''
+  const dueDate     = dom('ackDueDate')?.value || null
+  const notes       = dom('ackNotes')?.value?.trim() || ''
+
+  if (!templateId) { alert('Bitte eine Richtlinie wählen.'); return }
+
+  // E-Mail-Liste parsen (für email_campaign Modus)
+  let emailList = []
+  const emailRaw = dom('ackEmailList')?.value || ''
+  if (emailRaw) {
+    emailList = emailRaw.split(/[\n,;]+/).map(e => e.trim()).filter(e => e.includes('@'))
+  }
+
+  const res = await fetch('/distributions', {
+    method: 'POST',
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ templateId, targetGroup, dueDate, notes, emailList }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    alert(err.error || 'Fehler beim Anlegen')
+    return
+  }
+
+  const dist = await res.json()
+
+  // Bei email_campaign sofort E-Mails verschicken?
+  // Nur wenn E-Mail-Adressen vorhanden und SMTP konfiguriert
+  if (emailList.length > 0) {
+    const sendRes = await fetch(`/distributions/${dist.id}/send`, {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailList }),
+    })
+    if (sendRes.ok) {
+      const r = await sendRes.json()
+      alert(`Verteilrunde angelegt. ${r.sent} E-Mail(s) verschickt.`)
+    } else {
+      alert('Verteilrunde angelegt. E-Mails konnten nicht gesendet werden (SMTP nicht konfiguriert?).')
+    }
+  } else {
+    alert('Verteilrunde erfolgreich angelegt.')
+  }
+
+  _ackTab = 'list'
+  renderPolicyAcks()
+}
+
+async function openDistributionDetail(id) {
+  let dist
+  try { dist = await fetch(`/distributions/${id}`, { headers: apiHeaders() }).then(r => r.json()) } catch {}
+  if (!dist) return
+
+  let acks = []
+  try { acks = await fetch(`/distributions/${id}/acks`, { headers: apiHeaders() }).then(r => r.json()) } catch {}
+
+  const container = dom('policyAcksContent')
+  if (!container) return
+
+  const modeLabels = { email_campaign: 'E-Mail-Kampagne', manual: 'Manuell / CSV', distribution_only: 'Nur Verteilung' }
+  const pct = dist.stats.total > 0 ? Math.round(dist.stats.confirmed / dist.stats.total * 100) : 0
+
+  const acksHtml = acks.length === 0
+    ? `<p style="color:var(--text-muted);padding:20px 0">Noch keine Bestätigungen.</p>`
+    : `<table class="data-table" style="width:100%;margin-top:12px">
+        <thead><tr><th>E-Mail</th><th>Name</th><th>Bestätigt am</th><th>Methode</th>${getCurrentRole()==='admin'?'<th></th>':''}</tr></thead>
+        <tbody>${acks.map(a => `<tr>
+          <td>${escHtml(a.recipientEmail||'–')}</td>
+          <td>${escHtml(a.recipientName||'–')}</td>
+          <td>${a.acknowledgedAt ? new Date(a.acknowledgedAt).toLocaleString('de-DE') : '<span style="color:#fbbf24">Ausstehend</span>'}</td>
+          <td style="font-size:12px;color:var(--text-muted)">${a.method||'–'}</td>
+          ${getCurrentRole()==='admin'?`<td><button class="btn btn-danger btn-sm" onclick="deleteAck('${a.id}','${id}')"><i class="ph ph-trash"></i></button></td>`:''}
+        </tr>`).join('')}</tbody>
+      </table>`
+
+  // Manuelle Bestätigung hinzufügen (nur für manual/csv mode)
+  const addManualHtml = (dist.mode !== 'email_campaign') ? `
+    <div style="margin-top:24px;border-top:1px solid var(--border-color);padding-top:20px">
+      <h4 style="margin-bottom:12px"><i class="ph ph-plus"></i> Bestätigung manuell hinzufügen</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+        <div>
+          <label class="form-label">E-Mail</label>
+          <input type="email" id="manAckEmail" class="form-input" placeholder="alice@firma.de"/>
+        </div>
+        <div>
+          <label class="form-label">Name</label>
+          <input type="text" id="manAckName" class="form-input" placeholder="Alice Müller"/>
+        </div>
+        <button class="btn btn-primary" onclick="addManualAck('${id}')"><i class="ph ph-plus"></i> Hinzufügen</button>
+      </div>
+    </div>
+  ` : ''
+
+  // CSV-Import-Bereich (nur manual mode)
+  const csvImportHtml = dist.mode === 'manual' ? `
+    <div style="margin-top:16px">
+      <h4 style="margin-bottom:8px"><i class="ph ph-upload-simple"></i> CSV importieren</h4>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:8px">Format: <code>email;name;datum</code> (eine Zeile pro Person, Datum optional)</p>
+      <textarea id="csvImportData" class="form-textarea" rows="4" placeholder="alice@firma.de;Alice Müller;2026-03-13&#10;bob@firma.de;Bob Schmidt;"></textarea>
+      <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="importAcksCsv('${id}')"><i class="ph ph-upload-simple"></i> Importieren</button>
+    </div>
+  ` : ''
+
+  container.innerHTML = `
+    <div class="training-form-page">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <button class="btn btn-secondary btn-sm" onclick="_ackTab='list';renderPolicyAcks()"><i class="ph ph-arrow-left"></i> Zurück</button>
+        <h3 style="margin:0">${escHtml(dist.templateTitle)}</h3>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+        <div class="kpi-card"><div class="kpi-label">Modus</div><div class="kpi-value">${modeLabels[dist.mode]||dist.mode}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Zielgruppe</div><div class="kpi-value" style="font-size:14px">${escHtml(dist.targetGroup||'–')}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Frist</div><div class="kpi-value" style="font-size:14px">${dist.dueDate ? new Date(dist.dueDate).toLocaleDateString('de-DE') : '–'}</div></div>
+        ${dist.mode !== 'distribution_only' ? `
+        <div class="kpi-card"><div class="kpi-label">Bestätigt</div><div class="kpi-value">${dist.stats.confirmed}/${dist.stats.total} <span style="font-size:13px;color:var(--text-muted)">(${pct}%)</span></div></div>
+        ` : ''}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+        <a href="/distributions/${id}/export/csv" class="btn btn-secondary btn-sm"><i class="ph ph-download-simple"></i> CSV-Export</a>
+        ${dist.mode === 'email_campaign' ? `<button class="btn btn-secondary btn-sm" onclick="sendAckReminder('${id}')"><i class="ph ph-envelope"></i> Erinnerung senden</button>` : ''}
+        <select id="distStatusSel" class="select" style="max-width:180px;padding:6px 10px;font-size:13px" onchange="updateDistStatus('${id}',this.value)">
+          <option value="active"${dist.status==='active'?' selected':''}>Aktiv</option>
+          <option value="completed"${dist.status==='completed'?' selected':''}>Abgeschlossen</option>
+          <option value="expired"${dist.status==='expired'?' selected':''}>Abgelaufen</option>
+        </select>
+      </div>
+
+      <h4>Bestätigungen (${acks.length})</h4>
+      ${acksHtml}
+      ${addManualHtml}
+      ${csvImportHtml}
+    </div>
+  `
+}
+
+async function sendAckReminder(distId) {
+  if (!confirm('Erinnerungs-Mail an alle noch nicht bestätigten Empfänger senden?')) return
+  const res = await fetch(`/distributions/${distId}/remind`, { method: 'POST', headers: apiHeaders() })
+  const r = await res.json().catch(() => ({}))
+  alert(res.ok ? `${r.sent} Erinnerung(en) gesendet.` : (r.error || 'Fehler'))
+}
+
+async function updateDistStatus(distId, status) {
+  await fetch(`/distributions/${distId}`, {
+    method: 'PUT',
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+}
+
+async function deleteDistribution(id) {
+  if (!confirm('Verteilrunde und alle Bestätigungen löschen?')) return
+  const res = await fetch(`/distributions/${id}`, { method: 'DELETE', headers: apiHeaders() })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Fehler'); return }
+  renderPolicyAcks()
+}
+
+async function addManualAck(distId) {
+  const email = dom('manAckEmail')?.value?.trim()
+  const name  = dom('manAckName')?.value?.trim() || ''
+  if (!email) { alert('E-Mail-Adresse eingeben'); return }
+  const res = await fetch(`/distributions/${distId}/acks`, {
+    method: 'POST',
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipientEmail: email, recipientName: name }),
+  })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Fehler'); return }
+  openDistributionDetail(distId)
+}
+
+async function importAcksCsv(distId) {
+  const raw = dom('csvImportData')?.value?.trim()
+  if (!raw) return
+  const rows = raw.split('\n').map(line => {
+    const parts = line.split(';')
+    return { email: (parts[0]||'').trim(), name: (parts[1]||'').trim(), acknowledgedAt: (parts[2]||'').trim() || null }
+  }).filter(r => r.email)
+  if (!rows.length) { alert('Keine gültigen Zeilen gefunden.'); return }
+  const res = await fetch(`/distributions/${distId}/acks/import`, {
+    method: 'POST',
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows }),
+  })
+  const r = await res.json().catch(() => ({}))
+  alert(`${r.imported || 0} importiert, ${r.skipped || 0} übersprungen.`)
+  openDistributionDetail(distId)
+}
+
+async function deleteAck(ackId, distId) {
+  if (!confirm('Bestätigung löschen?')) return
+  await fetch(`/distributions/${distId}/acks/${ackId}`, { method: 'DELETE', headers: apiHeaders() })
+  openDistributionDetail(distId)
+}
+
+async function renderPolicyAckSettings() {
+  const container = dom('policyAcksContent')
+  if (!container) return
+
+  let current = 'manual'
+  try { current = (await fetch('/admin/ack-settings', { headers: apiHeaders() }).then(r => r.json())).policyAckMode || 'manual' } catch {}
+
+  container.innerHTML = `
+    <div class="training-form-page">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <button class="btn btn-secondary btn-sm" onclick="renderPolicyAcks()"><i class="ph ph-arrow-left"></i> Zurück</button>
+        <h3 style="margin:0"><i class="ph ph-gear"></i> Bestätigungs-Modus konfigurieren</h3>
+      </div>
+
+      <div class="info-box" style="margin-bottom:24px">
+        <i class="ph ph-warning"></i> Diese Einstellung gilt für <strong>alle zukünftigen Verteilrunden</strong>.
+        Bestehende Kampagnen behalten ihren ursprünglichen Modus.
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:600px">
+        ${[
+          { val:'email_campaign',    icon:'ph-envelope',   title:'E-Mail-Kampagne',              desc:'Token-Links per E-Mail — Mitarbeiter bestätigen ohne ISMS-Zugang' },
+          { val:'manual',            icon:'ph-pencil',     title:'Manuell / CSV-Import',         desc:'Bestätigungen werden manuell eingetragen oder per CSV importiert' },
+          { val:'distribution_only', icon:'ph-file-text',  title:'Nur Verteilung dokumentieren', desc:'Keine Einzelbestätigungen — nur Nachweis der Verteilung' },
+        ].map(opt => `
+          <label style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:2px solid ${current===opt.val?'var(--brand-color)':'var(--border-color)'};border-radius:8px;cursor:pointer;background:${current===opt.val?'var(--brand-color)18':'transparent'}">
+            <input type="radio" name="ackMode" value="${opt.val}" ${current===opt.val?'checked':''} style="margin-top:3px;accent-color:var(--brand-color)"/>
+            <div>
+              <div style="font-weight:600"><i class="ph ${opt.icon}"></i> ${opt.title}</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${opt.desc}</div>
+            </div>
+          </label>
+        `).join('')}
+      </div>
+
+      <div style="margin-top:24px;display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="savePolicyAckMode()"><i class="ph ph-floppy-disk"></i> Modus speichern</button>
+        <button class="btn btn-secondary" onclick="renderPolicyAcks()">Abbrechen</button>
+      </div>
+    </div>
+  `
+}
+
+async function savePolicyAckMode() {
+  const sel = document.querySelector('input[name="ackMode"]:checked')
+  if (!sel) return
+  const res = await fetch('/admin/ack-settings', {
+    method: 'PUT',
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ policyAckMode: sel.value }),
+  })
+  if (res.ok) { renderPolicyAcks() } else { alert('Fehler beim Speichern') }
+}
+
 // Init app after DOM load – nur auf der SPA-Hauptseite (index.html)
 window.addEventListener('DOMContentLoaded', () => {
   if (document.querySelector('.app-body')) init()
@@ -13325,7 +13759,7 @@ window.addEventListener('pageshow', (e) => {
     'dashboardContainer','soaContainer','guidanceContainer','riskContainer',
     'calendarContainer','adminPanelContainer','settingsPanelContainer','reportsContainer',
     'gdprContainer','trainingContainer','incidentContainer','legalContainer',
-    'goalsContainer','assetsContainer','governanceContainer','bcmContainer','suppliersContainer'
+    'goalsContainer','assetsContainer','governanceContainer','bcmContainer','suppliersContainer','policyAcksContainer'
   ]
   const alreadyRendered = containerIds.some(id => !!document.getElementById(id))
   if (!alreadyRendered) loadSection(currentSection)

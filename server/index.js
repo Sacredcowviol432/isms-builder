@@ -102,6 +102,8 @@ app.use(require('./routes/findings'))
 app.use(require('./routes/scanImport'))
 app.use(require('./routes/ai'))
 app.use(require('./routes/orgUnits'))
+app.use(require('./routes/acknowledgements'))
+app.use(require('./routes/ackPublic'))
 
 // Test-user management routes (temporary, test-env only)
 try {
