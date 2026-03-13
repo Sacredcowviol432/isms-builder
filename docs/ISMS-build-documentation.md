@@ -1498,7 +1498,7 @@ Alle Architekturdokumente liegen unter `docs/architecture/`. Das Projekt folgt O
 | Datei | Inhalt |
 |---|---|
 | `LICENSE` | GNU Affero General Public License v3.0 (AGPL-3.0), Copyright © 2026 Claude Hecker |
-| `THIRD-PARTY-LICENSES.md` | Vollständige Lizenzattribution aller eingebetteten Drittkomponenten (Phosphor Icons, marked.js, alle npm-Abhängigkeiten) mit Copyright-Inhabern, Lizenztexten (MIT, BSD-2-Clause, Apache-2.0) |
+| [`THIRD-PARTY-LICENSES.md`](../THIRD-PARTY-LICENSES.md) | Vollständige Lizenzattribution aller eingebetteten Drittkomponenten (Phosphor Icons, marked.js, alle npm-Abhängigkeiten) mit Copyright-Inhabern, Lizenztexten (MIT, BSD-2-Clause, Apache-2.0) |
 | `CONTRIBUTING.md` | Entwicklungs-Setup, Code-Stil, PR-Richtlinien, Anleitung zum Hinzufügen neuer Module |
 | `README.md` | Open-Source-README: Feature-Tabelle, Quick Start, Konfiguration, Architekturüberblick |
 | `docs/badges/version.svg` | Lokale SVG-Badge-Datei für die Versionsanzeige (wird in `README.md` eingebettet) |
