@@ -8,16 +8,114 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.34.1] — 2026-03-13
+
+### Added
+- **MariaDB/MySQL-Backend**: `server/db/mariadbDatabase.js` (Connection-Pool, vollständiges Schema mit 20 Tabellen für utf8mb4) + `server/db/mariadbStore.js` (vollständige async Template-CRUD-Schicht, API-kompatibel zu SQLite-Store); aktiviert via `STORAGE_BACKEND=mariadb` in `.env`; `mysql2` als `optionalDependency` ergänzt
+- **Migrationsskript**: `tools/migrate-json-to-mariadb.js` — überträgt Templates, Training, Entities, Risks, Guidance, Goals, Assets, Suppliers sowie alle GDPR-Sub-Stores (VVT/AV/DSFA/Incidents/DSAR/TOMs) idempotent nach MariaDB
+- **`.env.example`**: MariaDB-Verbindungsvariablen (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_SSL`) mit Kommentaren und Setup-Kurzanleitung ergänzt
+- **Docs Abschnitt 31**: Backend-Übersichtstabelle um MariaDB erweitert; vollständige Schritt-für-Schritt-Migrations-Anleitung; Backup-Tabelle um `mysqldump`-Befehl ergänzt
+
+### Fixed
+- **Admin → Organisation**: Organisationseinheiten (OE) werden jetzt korrekt im Organisations-Tab angezeigt — zuvor wurde die OE-Sektion beim erneuten Tab-Öffnen überschrieben; OE-Tabelle direkt inline in `renderAdminOrgTab()` integriert (Option B)
+- **Bezeichnung OE**: „IT Organisational Units" → „Organisational Units" (gilt für gesamte Organisation)
+- **GitHub Release-Workflow**: `permissions: contents: write` ergänzt — `softprops/action-gh-release` konnte wegen fehlender Berechtigung keine Releases anlegen (HTTP 403)
+- **Chrome / GDPR-Modul**: Ursache für verschwindenden GDPR-Bereich identifiziert — Security-Extensions (Malwarebytes Browser Guard) blockieren Elemente mit `.gdpr-*` CSS-Klassen; Workaround in Troubleshooting-Doku ergänzt
+- **Defensive Rendering**: `scrollTop`-Reset beim Sektionswechsel, `isConnected`-Guard in `switchGdprTab`, bfcache-Handler prüft vor Re-Render ob Container bereits vorhanden
+- **Findings UI**: Drucken/PDF-Button in Finding-Detail-Ansicht; Status-Fortschrittsbalken für Maßnahmen (done/total); `printFindingDetail(id)` via `window.open + window.print()`
+- **Findings Listenexport**: JSON-, CSV- und PDF-Export-Buttons auf der Findings-Übersicht (`exportFindingsJson()`, `exportFindingsCsv()`, `exportFindingsPdf()`)
+
+### Added (continued)
+- **Favicon**: Shield-Check-Icon (16/32/48 px) aus Login-Logo generiert, in `index.html` und `login.html` eingebunden
+- **Systemhandbuch ISMS Build** (`data/guidance.json`, `guid_demo_de_001`): Inhalt von leerem Platzhalter zu vollständiger Admin-Schnellreferenz ausgebaut — 9 Abschnitte: Modulübersicht, RBAC-Rollen, Template-Lifecycle, häufige Admin-Aufgaben, Storage-Backends, E-Mail-Benachrichtigungen, Öffentliche Vorfallmeldung, 2FA-Richtlinien, Semantische Suche
+
+---
+
+## [1.33.2] — 2026-03-12
+
+### Changed
+- **npm update**: all minor and patch dependencies updated (38 added, 29 removed, 64 changed); 0 vulnerabilities
+- **`PINNED-DEPS.md`** extended: pending major-version migrations documented (express 4→5, bcryptjs 2→3, dotenv 16→17) with rationale and migration checklist; `pdf-parse` section unchanged
+
+---
+
+## [1.33.1] — 2026-03-12
+
+### Added
+- **Dependabot** (`.github/dependabot.yml`): weekly automated PRs for npm and GitHub Actions updates; major-version upgrades excluded (manual review required); labels `dependencies` + `security`
+- **`npm audit` hard fail in CI**: `--audit-level=high` no longer uses `continue-on-error`; critical and high vulnerabilities now break the build; moderate level remains informational; full JSON audit report uploaded as CI artefact (30-day retention)
+- **`scripts/security-check.sh`**: local security and patch status check covering Node.js LTS version, npm audit (critical/high/moderate/low), outdated packages with security-relevance marker, pinned dependency verification, Ollama service reachability and version, `.env` hygiene (JWT_SECRET length, DEV_HEADER_AUTH, SSL certificate expiry)
+- **npm scripts**: `npm run security:check`, `npm run security:audit`, `npm run security:outdated`
+- **`PINNED-DEPS.md`**: machine- and human-readable register of intentionally pinned dependencies with rationale, affected files, and migration instructions
+- **`pdf-parse` pin enforcement**: `pdf-parse` pinned to exact version `1.1.1` (no `^`); Dependabot permanently ignores `>= 1.1.2`; CI step `Verify pinned dependencies` breaks the build if installed version deviates; `security-check.sh` checks locally — reason: v2 has an incompatible API (class-based instead of function export), see `PINNED-DEPS.md`
+
+---
+
+## [1.33.0] — 2026-03-12
+
+### Added
+- **Scanner → Risk Import**: Greenbone/OpenVAS scan results (XML and PDF) can be imported as risk drafts requiring auditor approval before entering normal workflow
+  - `server/ai/greenboneXmlParser.js` — GMP XML parser (`<get_reports_response>` and direct `<report>`)
+  - `server/ai/greenobonePdfParser.js` — PDF extraction via regex; Ollama LLM fallback (`llama3.2:3b`)
+  - `server/ai/scanImporter.js` — clusters by NVT-OID, deduplicates, maps CVSS → probability/impact, creates drafts with `needsReview: true, source: 'greenbone-scan'`
+  - `POST /admin/scan-import/upload` (multer, max 20 MB, .xml/.pdf) and `GET /admin/scan-import/status`
+  - Admin → Maintenance: Scan-Import section with file picker, entity selector and result display
+- **Risk Review Workflow**: Scan-imported risks require explicit approval before entering normal workflow
+  - `needsReview` flag, `getReviewPending()` and `approve(id, approvedBy)` in riskStore
+  - `GET /risks/review-pending` and `POST /risks/:id/approve` (auditor+)
+  - Dashboard: amber alert card when review-pending risks exist
+  - Risk detail: review banner with inline "Freigeben" button
+- **CVSS v3.1 Severity**: Full FIRST.org CVSS v3.1 severity bands surfaced in the Risk module
+  - Colour-coded badges in the risk list table
+  - CVSS detail card in risk detail view (score bar, description, CVE chips, FIRST.org attribution)
+  - Helper functions `cvssInfo()`, `cvssBadgeHtml()`, `cvssBarHtml()`
+- **Risk Register Report**: New report type `risks` (`GET /reports/risks`) — all approved risks with CVSS scores, CVE IDs, source and KPI row; CSV export included
+- **CHANGELOG in Guidance**: CHANGELOG.md is now seeded as a `admin-intern` Guidance entry (`seed_changelog`) and updated on every server start
+
+### Changed
+- **Risk Detail**: Rewritten as inline full-page form (training-form-page pattern) — no overlay modal
+- **Entity names in Risk Detail**: Applicable entity IDs resolved to display names via `entityMap`
+
+### Fixed
+- `GET /risks/review-pending` was matched by Express as `GET /risks/:id`; fixed by moving the route before the wildcard
+- Entity selector in Admin Maintenance tab referenced undefined `ENTITIES_CACHE`; fixed by local fetch
+
+---
+
 ## [1.32.0] — 2026-03-12
 
 ### Added
 - **Findings → Calendar**: Finding action due dates appear as `finding_action_due` calendar events; overdue actions are marked as `severity: high`
 - **Findings → Semantic Search**: Findings are automatically indexed via Ollama embeddings (`embeddingStore.indexDoc`) on create/update and removed on permanent delete
 - **Findings → Reports**: New *Audit Findings* report type (`GET /reports/findings`) with KPI row (total, by severity, by status, open actions, overdue actions) and filterable table (Ref / Title / Severity / Status / Auditor / Area / Observation / Requirement / Open Actions)
-- **PDF Export for Reports**: New PDF export button in the reports filter bar — generates a print-ready page in a new browser tab via `window.print()`
+- **Scanner → Risk Import**: Greenbone/OpenVAS scan results can be imported as risk drafts
+  - `server/ai/greenboneXmlParser.js` — parses GMP XML (`<get_reports_response>` and direct `<report>`) into a normalised finding array
+  - `server/ai/greenobonePdfParser.js` — extracts findings from Greenbone PDF reports via regex; falls back to Ollama LLM (`llama3.2:3b`) if regex yields no results
+  - `server/ai/scanImporter.js` — clusters findings by NVT-OID, deduplicates against existing scan references, maps CVSS → probability/impact, creates risk drafts with `needsReview: true` and `source: 'greenbone-scan'`
+  - `server/routes/scanImport.js` — `POST /admin/scan-import/upload` (multer memoryStorage, max 20 MB, .xml/.pdf); `GET /admin/scan-import/status`; requires auditor role
+  - Admin → Maintenance: Scan-Import section with file picker, entity selector and result display
+- **Risk Review Workflow**: Scan-imported risks require explicit approval before entering normal workflow
+  - `needsReview` flag on risk records; `getReviewPending()` and `approve(id, approvedBy)` in riskStore
+  - `GET /risks/review-pending` — lists all risks pending approval
+  - `POST /risks/:id/approve` — sets `needsReview: false`, records `approvedBy`/`approvedAt` (auditor+)
+  - Dashboard alert: amber warning card when review-pending risks exist, with direct link to Risks module
+  - Risk detail view: prominent review banner with "Freigeben" button when `needsReview: true`
+- **CVSS v3.1 Severity in Risk module**: Full FIRST.org CVSS v3.1 severity bands (Critical/High/Medium/Low/None) surfaced throughout the Risk module
+  - Colour-coded CVSS badges in the risk list table
+  - CVSS detail card in risk detail view: score bar, severity label, textual description, CVE chips, FIRST.org attribution
+  - `cvssInfo(score)`, `cvssBadgeHtml(score)`, `cvssBarHtml(score)` helper functions; CSS classes `.cvss-badge`, `.cvss-bar-*`, `.cvss-detail-card`
+- **Risk Register report**: New report type `risks` (`GET /reports/risks`) showing all approved risks with CVSS scores, CVE IDs, source (scan vs. manual), KPI row by severity level and origin
+  - CSV export via `GET /reports/export/csv?type=risks`
+- **PDF Export for Reports**: PDF export button in the reports filter bar — generates a print-ready page in a new browser tab via `window.print()`
+
+### Changed
+- **Risk Detail**: Rewritten as inline full-page form (training-form-page pattern) inside `#riskTabContent` — no overlay modal; includes two-column detail grid, CVSS card, treatment plans, linked controls and applicable entities
+- **Entity names in Risk Detail**: Applicable entity IDs are resolved to display names via a parallel `/entities` fetch and `entityMap` lookup
 
 ### Fixed
 - Reports filter panel was hidden entirely for report types that don't require an entity selection (`needsEntity: false`); fixed by wrapping the entity selector in a dedicated `<div id="reportEntityWrap">`
+- `GET /risks/review-pending` was matched as `GET /risks/:id` (Express wildcard) — fixed by moving the route before the wildcard route in `server/routes/risks.js`
+- Entity selector in Admin Maintenance tab referenced undefined `ENTITIES_CACHE`; fixed by fetching `/entities` locally at render time
 
 ---
 

@@ -1,7 +1,7 @@
 // ISMS Builder V 1.29 – Single Page Application
 // © 2026 Claude Hecker — AGPL-3.0
 
-let TYPES = ['Policy','Procedure','Risk','SoA','Incident','Release']
+let TYPES = ['Policy','Procedure','Risk Policy','SoA','Incident','Release']
 const ADMIN_SECTIONS = ['Guidance','Risk','Admin','Legal','Incident','Privacy','Training','Reports','Settings']
 let currentType = 'Policy'
 let currentTemplate = null
@@ -58,7 +58,7 @@ const TYPE_ICONS = {
   Incident:  'ph-fire-simple',
   Release:   'ph-rocket-launch',
   // KI-Suchtypen
-  'Risk':            'ph-warning',
+  'Risk Policy':     'ph-warning',
   'Security Goal':   'ph-flag',
   'Document':        'ph-file-text',
   'System Manual':   'ph-book-open',
@@ -565,6 +565,18 @@ function selectType(type, init=false) {
   })
   dom('selType').textContent = type
 
+  // When the user explicitly clicks a template type, show the editor area
+  // and hide all module containers so the template list/editor is visible
+  if (!init) {
+    removeAllDynamicPanels()
+    document.querySelectorAll('#sectionNav .sidebar-nav-item').forEach(btn => btn.classList.remove('active'))
+    currentSection = null
+    const editorCard = dom('editorCard')
+    const listPanel  = dom('listPanel')
+    if (editorCard) editorCard.style.display = ''
+    if (listPanel)  listPanel.style.display  = ''
+  }
+
   const isAdmin = (ROLE_RANK[getCurrentRole()] || 0) >= ROLE_RANK['admin']
 
   fetch(`/templates/tree?type=${encodeURIComponent(type)}&language=de`, { headers: apiHeaders('reader') })
@@ -944,6 +956,7 @@ const REPORT_TYPES = [
   { id: 'matrix',     label: 'Compliance Matrix',     icon: 'ph-table',                  desc: 'Control × Entity traffic light overview', needsEntity: false },
   { id: 'audit',      label: 'Audit Trail',            icon: 'ph-clock-counter-clockwise', desc: 'Status changes on templates in a given period', needsEntity: false },
   { id: 'findings',   label: 'Audit Findings',         icon: 'ph-magnifying-glass',        desc: 'Audit findings with action plans (IST→SOLL→Risk→Recommendation)', needsEntity: false },
+  { id: 'risks',      label: 'Risk Register',          icon: 'ph-warning',                 desc: 'All approved risks incl. CVSS scores from scan imports', needsEntity: true },
 ]
 
 let _reportEntities = []
@@ -1241,6 +1254,37 @@ function renderReportResult(type, data, el) {
         }).join('')}
         </tbody>
       </table>`
+  } else if (type === 'risks') {
+    const lvColor = { critical:'#dc2626', high:'#ea580c', medium:'#ca8a04', low:'#16a34a', info:'#6b7280' }
+    el.innerHTML = `
+      <h3 class="report-result-title">Risk Register (${data.total} freigegebene Risiken)</h3>
+      <div class="report-kpi-row" style="margin-bottom:16px">
+        <div class="report-kpi"><span class="report-kpi-val" style="color:#dc2626">${data.byLevel?.critical||0}</span><span class="report-kpi-label">Critical</span></div>
+        <div class="report-kpi"><span class="report-kpi-val" style="color:#ea580c">${data.byLevel?.high||0}</span><span class="report-kpi-label">High</span></div>
+        <div class="report-kpi"><span class="report-kpi-val" style="color:#ca8a04">${data.byLevel?.medium||0}</span><span class="report-kpi-label">Medium</span></div>
+        <div class="report-kpi"><span class="report-kpi-val" style="color:#16a34a">${data.byLevel?.low||0}</span><span class="report-kpi-label">Low</span></div>
+        <div class="report-kpi"><span class="report-kpi-val">${data.bySource?.scan||0}</span><span class="report-kpi-label">aus Scan</span></div>
+        <div class="report-kpi"><span class="report-kpi-val">${data.bySource?.manual||0}</span><span class="report-kpi-label">Manuell</span></div>
+      </div>
+      <table class="report-table">
+        <thead><tr><th>Titel</th><th>Kategorie</th><th>Schweregrad</th><th>Status</th><th>CVSS</th><th>CVEs</th><th>Score</th><th>Owner</th><th>Quelle</th></tr></thead>
+        <tbody>${(data.risks||[]).map(r => {
+          const cvssVal  = r.cvssScore != null ? r.cvssScore.toFixed(1) : null
+          const cvssData = cvssVal ? cvssInfo(r.cvssScore) : null
+          return `<tr>
+            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.title)}">${escHtml(r.title)}</td>
+            <td>${escHtml(r.category||'—')}</td>
+            <td><span style="color:${lvColor[r.level]||'#888'};font-weight:600">${r.level||'—'}</span></td>
+            <td><span class="status-badge status-${r.status}">${r.status||'—'}</span></td>
+            <td>${cvssVal ? `<span class="cvss-badge ${cvssData?.cls||''}" style="font-size:.75rem">${cvssVal}</span>` : '—'}</td>
+            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.cveIds||[]).join(', ')||'—'}</td>
+            <td style="text-align:center">${r.score != null ? r.score : '—'}</td>
+            <td>${escHtml(r.owner||'—')}</td>
+            <td>${r.source === 'greenbone-scan' ? '<span class="badge-review-pending" style="background:#3b82f6;color:#fff;font-size:.7rem">Scan</span>' : 'Manuell'}</td>
+          </tr>`
+        }).join('')}
+        </tbody>
+      </table>`
   } else {
     el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
   }
@@ -1341,13 +1385,18 @@ async function renderFindingsTab() {
   ]
 
   content.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-inv)">
         <i class="ph ph-magnifying-glass"></i> Audit-Feststellungen
       </h3>
-      ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="openFindingForm()">
-        <i class="ph ph-plus"></i> Neue Feststellung
-      </button>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="exportFindingsJson()"><i class="ph ph-download-simple"></i> JSON</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportFindingsCsv()"><i class="ph ph-file-csv"></i> CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportFindingsPdf()"><i class="ph ph-file-pdf"></i> PDF</button>
+        ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="openFindingForm()">
+          <i class="ph ph-plus"></i> Neue Feststellung
+        </button>` : ''}
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
@@ -1459,6 +1508,12 @@ async function openFindingDetail(id) {
   const canEdit = rank >= ROLE_RANK.auditor
   const canAct  = rank >= ROLE_RANK.editor
 
+  const actions    = f.actions || []
+  const actDone    = actions.filter(a => a.status === 'done').length
+  const actTotal   = actions.length
+  const actPct     = actTotal > 0 ? Math.round((actDone / actTotal) * 100) : 0
+  const pbarColor  = actPct === 100 ? '#4ade80' : actPct >= 50 ? '#fbbf24' : '#fb923c'
+
   content.innerHTML = `
     <div class="training-form-page">
       <div class="training-form-header">
@@ -1470,6 +1525,9 @@ async function openFindingDetail(id) {
           <span style="font-size:12px;color:var(--text-subtle);font-family:monospace">${escHtml(f.ref)}</span>
           ${escHtml(f.title)}
         </h3>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="printFindingDetail('${f.id}')">
+          <i class="ph ph-printer"></i> Drucken / PDF
+        </button>
       </div>
       <div class="training-form-body">
 
@@ -1505,7 +1563,7 @@ async function openFindingDetail(id) {
         </div>
 
         <div class="training-form-section" id="actionsSection">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <h4 class="training-form-section-title" style="margin:0">
               <i class="ph ph-check-square"></i> Maßnahmenplan
             </h4>
@@ -1513,6 +1571,16 @@ async function openFindingDetail(id) {
               <i class="ph ph-plus"></i> Maßnahme
             </button>` : ''}
           </div>
+          ${actTotal > 0 ? `
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-subtle);margin-bottom:4px">
+              <span>Fortschritt</span>
+              <span>${actDone} / ${actTotal} erledigt (${actPct} %)</span>
+            </div>
+            <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden">
+              <div style="height:100%;width:${actPct}%;background:${pbarColor};border-radius:4px;transition:width .3s ease"></div>
+            </div>
+          </div>` : ''}
           <div id="actionsList">
             ${_renderActionsList(f.actions || [], f.id, canAct)}
           </div>
@@ -1527,6 +1595,155 @@ async function openFindingDetail(id) {
       </div>
     </div>
   `
+}
+
+async function printFindingDetail(findingId) {
+  const r = await fetch(`/findings/${findingId}`, { headers: apiHeaders() })
+  if (!r.ok) return
+  const f = await r.json()
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const actions = f.actions || []
+  const done = actions.filter(a => a.status === 'done').length
+  const pct  = actions.length ? Math.round(done / actions.length * 100) : 0
+  const sevColor = { critical:'#c0392b', high:'#e67e22', medium:'#f39c12', low:'#27ae60', observation:'#2980b9' }
+  const actLabel = { open:'Offen', in_progress:'In Bearbeitung', done:'Erledigt' }
+  const win = window.open('', '_blank')
+  if (!win) return alert('Pop-up blockiert. Bitte Pop-ups für diese Seite erlauben.')
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>${esc(f.ref)} — ${esc(f.title)}</title>
+    <style>
+      body  { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 28px; }
+      h1    { font-size: 15px; margin: 0 0 2px; }
+      .meta { font-size: 11px; color: #666; margin-bottom: 18px; }
+      .badge{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; color:#fff; margin-left:6px; }
+      .section { margin-bottom: 16px; }
+      .section h2 { font-size: 12px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 8px; }
+      .field  { margin-bottom: 10px; }
+      .label  { font-size: 10px; font-weight: bold; color: #555; margin-bottom: 2px; }
+      .value  { background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; white-space: pre-wrap; }
+      .grid2  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-bottom: 10px; font-size: 11px; }
+      .pbar-wrap { background: #e0e0e0; border-radius: 4px; height: 8px; margin: 4px 0 2px; }
+      .pbar { height: 100%; border-radius: 4px; background: ${pct===100?'#27ae60':pct>=50?'#f39c12':'#e74c3c'}; width: ${pct}%; }
+      table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+      th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 11px; text-align: left; }
+      th { background: #f0f0f0; font-weight: bold; }
+      @media print { body { margin: 0; } }
+    </style>
+  </head><body>
+    <h1>${esc(f.ref)} — ${esc(f.title)}
+      <span class="badge" style="background:${sevColor[f.severity]||'#888'}">${esc(f.severity||'')}</span>
+      <span class="badge" style="background:#555">${esc(f.status||'')}</span>
+    </h1>
+    <div class="meta">Erstellt: ${(f.createdAt||'').slice(0,10)} · Auditor: ${esc(f.auditor)} · Bereich: ${esc(f.auditedArea)}</div>
+
+    <div class="section">
+      <h2>Feststellung</h2>
+      <div class="grid2">
+        <div><span style="color:#555">Zeitraum:</span> ${esc(f.auditPeriodFrom||'—')}${f.auditPeriodTo?' – '+esc(f.auditPeriodTo):''}</div>
+        <div><span style="color:#555">Verknüpfte Controls:</span> ${(f.linkedControls||[]).join(', ')||'—'}</div>
+      </div>
+      <div class="field"><div class="label">IST-Zustand (Beobachtung)</div><div class="value">${esc(f.observation)}</div></div>
+      <div class="field"><div class="label">SOLL-Zustand (Anforderung)</div><div class="value">${esc(f.requirement)}</div></div>
+      <div class="field"><div class="label">Risiko / Auswirkung</div><div class="value">${esc(f.impact)}</div></div>
+      <div class="field"><div class="label">Empfehlung</div><div class="value">${esc(f.recommendation)}</div></div>
+    </div>
+
+    <div class="section">
+      <h2>Maßnahmenplan — ${done} / ${actions.length} erledigt (${pct} %)</h2>
+      <div class="pbar-wrap"><div class="pbar"></div></div>
+      ${actions.length === 0 ? '<p style="color:#999;font-size:11px">Keine Maßnahmen eingetragen.</p>' : `
+      <table>
+        <thead><tr><th>Maßnahme</th><th>Verantwortlich</th><th>Fällig</th><th>Status</th></tr></thead>
+        <tbody>
+          ${actions.map(a => `<tr>
+            <td>${esc(a.description)}</td>
+            <td>${esc(a.responsible||'—')}</td>
+            <td style="${a.status!=='done'&&a.dueDate&&new Date(a.dueDate)<new Date()?'color:#c0392b;font-weight:bold':''}">${esc(a.dueDate||'—')}</td>
+            <td>${esc(actLabel[a.status]||a.status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+    <script>window.onload = () => window.print()<\/script>
+  </body></html>`)
+  win.document.close()
+}
+
+async function exportFindingsJson() {
+  const r = await fetch('/findings', { headers: apiHeaders() })
+  if (!r.ok) return
+  const data = await r.json()
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = `findings-${new Date().toISOString().slice(0,10)}.json`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportFindingsCsv() {
+  const r = await fetch('/findings', { headers: apiHeaders() })
+  if (!r.ok) return
+  const list = await r.json()
+  const cols = ['ref','title','severity','status','auditedArea','auditor','auditPeriodFrom','auditPeriodTo','createdAt']
+  const esc  = v => `"${String(v||'').replace(/"/g,'""')}"`
+  const rows = [cols.join(','), ...list.map(f => cols.map(c => esc(f[c])).join(','))]
+  const blob = new Blob([rows.join('\r\n')], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = `findings-${new Date().toISOString().slice(0,10)}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportFindingsPdf() {
+  const r = await fetch('/findings', { headers: apiHeaders() })
+  if (!r.ok) return
+  const list = await r.json()
+  const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  const sevColor = { critical:'#c0392b', high:'#e67e22', medium:'#f39c12', low:'#27ae60', observation:'#2980b9' }
+  const win  = window.open('', '_blank')
+  if (!win) return alert('Pop-up blockiert. Bitte Pop-ups für diese Seite erlauben.')
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Audit-Feststellungen — ${new Date().toLocaleDateString('de-DE')}</title>
+    <style>
+      body  { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 28px; }
+      h1    { font-size: 15px; margin-bottom: 4px; }
+      .sub  { font-size: 11px; color: #666; margin-bottom: 16px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td{ border: 1px solid #ccc; padding: 4px 8px; font-size: 11px; text-align: left; }
+      th    { background: #f0f0f0; font-weight: bold; }
+      .badge{ display:inline-block; padding:1px 7px; border-radius:8px; font-size:10px; font-weight:700; color:#fff; }
+      @media print { body { margin: 0; } }
+    </style>
+  </head><body>
+    <h1><i>Audit-Feststellungen</i></h1>
+    <div class="sub">Stand: ${new Date().toLocaleString('de-DE')} · ISMS Builder · ${list.length} Einträge</div>
+    <table>
+      <thead><tr>
+        <th>Ref</th><th>Titel</th><th>Schwere</th><th>Status</th>
+        <th>Bereich</th><th>Auditor</th><th>Zeitraum</th><th>Maßnahmen</th>
+      </tr></thead>
+      <tbody>
+        ${list.map(f => {
+          const done  = (f.actions||[]).filter(a => a.status==='done').length
+          const total = (f.actions||[]).length
+          return `<tr>
+            <td style="font-family:monospace;white-space:nowrap">${esc(f.ref)}</td>
+            <td>${esc(f.title)}</td>
+            <td><span class="badge" style="background:${sevColor[f.severity]||'#888'}">${esc(f.severity)}</span></td>
+            <td>${esc(f.status)}</td>
+            <td>${esc(f.auditedArea)}</td>
+            <td>${esc(f.auditor)}</td>
+            <td style="white-space:nowrap">${esc(f.auditPeriodFrom||'—')}${f.auditPeriodTo?' – '+esc(f.auditPeriodTo):''}</td>
+            <td style="text-align:center">${done}/${total}</td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>
+    <script>window.onload = () => window.print()<\/script>
+  </body></html>`)
+  win.document.close()
 }
 
 function _renderActionsList(actions, findingId, canEdit) {
@@ -1783,6 +2000,9 @@ function renderSectionContent(sectionId){
   const listPanel = dom('listPanel')
 
   removeAllDynamicPanels()
+  // Chrome behält scroll-Position beim Sektionswechsel — zurücksetzen
+  const editorEl = dom('editor')
+  if (editorEl) editorEl.scrollTop = 0
 
   if (sectionId === 'dashboard') {
     editorCard.style.display = 'none'
@@ -2209,6 +2429,9 @@ function renderSoaContent(container) {
         <span class="soa-kpi soa-kpi-blue">${implRate}% umgesetzt</span>
         <a class="btn btn-export" href="/soa/export" download="soa-export.json">Export JSON</a>
         ${(ROLE_RANK[getCurrentRole()] || 0) >= ROLE_RANK['admin'] ? `<button class="btn btn-import-iso" onclick="openSoaIsoImport()" title="ISO 27001/9000/9001 Controls importieren">⬆ ISO Controls importieren</button>` : ''}
+        ${soaActiveFramework === 'CUSTOM' && (ROLE_RANK[getCurrentRole()] || 0) >= ROLE_RANK['contentowner']
+          ? `<button class="btn btn-primary btn-sm" onclick="openCustomControlModal(null)"><i class="ph ph-plus"></i> New Control</button>`
+          : ''}
       </div>
       <div class="soa-filters">
         <select id="soaFilterTheme" class="soa-select">
@@ -2311,7 +2534,13 @@ function soaRow(c, canEdit) {
           ? `<input class="soa-just-input" data-id="${c.id}" value="${c.justification||''}" placeholder="Justification…">`
           : (c.justification || '')}
       </td>
-      ${canEdit ? `<td><button class="btn-soa-save soa-save-btn" data-id="${c.id}">Save</button></td>` : ''}
+      ${canEdit ? `<td style="white-space:nowrap">
+        <button class="btn-soa-save soa-save-btn" data-id="${c.id}">Save</button>
+        ${c.isCustom ? `
+          <button class="btn btn-secondary btn-xs" style="margin-left:4px" onclick="openCustomControlModal('${c.id}')" title="Edit control"><i class="ph ph-pencil"></i></button>
+          <button class="btn btn-danger btn-xs" style="margin-left:4px" onclick="deleteCustomControl('${c.id}','${escHtml(c.title)}')" title="Delete (only if no templates linked)"><i class="ph ph-trash"></i></button>
+        ` : ''}
+      </td>` : ''}
     </tr>
     <tr class="soa-detail-row" data-for="${c.id}" style="display:none;">
       <td colspan="8" class="soa-detail-cell">
@@ -2542,6 +2771,85 @@ function openSoaIsoImport() {
   inp.click()
 }
 
+// ── Custom Controls ─────────────────────────────────────────────────────────
+
+function openCustomControlModal(id) {
+  const existing = id ? soaData.find(c => c.id === id) : null
+  document.getElementById('customCtrlModal')?.remove()
+  const html = `
+    <div id="customCtrlModal" class="modal" style="visibility:visible">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title"><i class="ph ph-sliders"></i> ${existing ? 'Edit' : 'New'} Custom Control</h3>
+          <button class="modal-close" onclick="document.getElementById('customCtrlModal').remove()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label class="form-label">Title <span class="form-required">*</span></label>
+            <input id="ccTitle" class="form-input" value="${escHtml(existing?.title||'')}" placeholder="Control title…">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label">Theme / Category</label>
+              <input id="ccTheme" class="form-input" value="${escHtml(existing?.theme||'')}" placeholder="e.g. Access Control">
+            </div>
+            <div>
+              <label class="form-label">Responsible</label>
+              <input id="ccOwner" class="form-input" value="${escHtml(existing?.owner||'')}" placeholder="Name or role">
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Description</label>
+            <textarea id="ccDesc" class="form-textarea" rows="2">${escHtml(existing?.description||'')}</textarea>
+          </div>
+          <div>
+            <label class="form-label">Justification</label>
+            <input id="ccJust" class="form-input" value="${escHtml(existing?.justification||'')}" placeholder="Why is this control needed?">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('customCtrlModal').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitCustomControlModal('${id||''}')">
+            <i class="ph ph-floppy-disk"></i> Save
+          </button>
+        </div>
+      </div>
+    </div>`
+  document.body.insertAdjacentHTML('beforeend', html)
+}
+
+async function submitCustomControlModal(id) {
+  const title = document.getElementById('ccTitle')?.value.trim()
+  if (!title) { alert('Title is required'); return }
+  const body = {
+    title,
+    theme:         document.getElementById('ccTheme')?.value.trim() || 'Custom',
+    owner:         document.getElementById('ccOwner')?.value.trim() || '',
+    description:   document.getElementById('ccDesc')?.value.trim()  || '',
+    justification: document.getElementById('ccJust')?.value.trim()  || '',
+  }
+  const url    = id ? `/soa/custom/${id}` : '/soa/custom'
+  const method = id ? 'PUT' : 'POST'
+  const res = await fetch(url, { method, headers: { ...apiHeaders('contentowner'), 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  document.getElementById('customCtrlModal')?.remove()
+  // Reload the CUSTOM framework tab
+  const container = document.getElementById('soaContainer')
+  if (container) await switchFramework('CUSTOM', container)
+}
+
+async function deleteCustomControl(id, title) {
+  if (!confirm(`Delete custom control "${title}"?\nOnly possible if no templates are linked.`)) return
+  const res = await fetch(`/soa/custom/${id}`, { method: 'DELETE', headers: apiHeaders('contentowner') })
+  if (!res.ok) {
+    const e = await res.json().catch(()=>({}))
+    alert(e.error || 'Error deleting control')
+    return
+  }
+  const container = document.getElementById('soaContainer')
+  if (container) await switchFramework('CUSTOM', container)
+}
+
 async function saveSoaRow(id, container) {
   const row = container.querySelector(`tr[data-id="${id}"]`)
   if (!row) return
@@ -2580,9 +2888,9 @@ async function renderDashboard() {
 
   container.innerHTML = '<div class="dashboard-loading">Loading Dashboard…</div>'
 
-  let data, soaSummary, riskSummary, gdprDash, trainSummary, legalSummary, calEvents, goalsSummary, assetSummary, govSummary, bcmSummary, supplierSummary, findingsSummary
+  let data, soaSummary, riskSummary, gdprDash, trainSummary, legalSummary, calEvents, goalsSummary, assetSummary, govSummary, bcmSummary, supplierSummary, findingsSummary, reviewPending
   try {
-    const [dashRes, soaRes, riskRes, gdprRes, trainRes, legalRes, calRes, goalsRes, assetRes, govRes, bcmRes, supplierRes, findRes] = await Promise.all([
+    const [dashRes, soaRes, riskRes, gdprRes, trainRes, legalRes, calRes, goalsRes, assetRes, govRes, bcmRes, supplierRes, findRes, reviewRes] = await Promise.all([
       fetch('/dashboard',                                                                       { headers: apiHeaders('reader') }),
       MODULE_CONFIG.soa        ? fetch('/soa/summary',          { headers: apiHeaders('reader') }) : Promise.resolve(null),
       MODULE_CONFIG.risk       ? fetch('/risks/summary',        { headers: apiHeaders('reader') }) : Promise.resolve(null),
@@ -2596,6 +2904,7 @@ async function renderDashboard() {
       MODULE_CONFIG.bcm        ? fetch('/bcm/summary',          { headers: apiHeaders('reader') }) : Promise.resolve(null),
       MODULE_CONFIG.suppliers  ? fetch('/suppliers/summary',    { headers: apiHeaders('reader') }) : Promise.resolve(null),
       fetch('/findings/summary',                                { headers: apiHeaders('reader') }),
+      MODULE_CONFIG.risk       ? fetch('/risks/review-pending', { headers: apiHeaders('reader') }) : Promise.resolve(null),
     ])
     if (!dashRes.ok) throw new Error('API error')
     data             = await dashRes.json()
@@ -2611,6 +2920,7 @@ async function renderDashboard() {
     bcmSummary       = bcmRes?.ok      ? await bcmRes.json()       : null
     supplierSummary  = supplierRes?.ok ? await supplierRes.json()  : null
     findingsSummary  = findRes?.ok     ? await findRes.json()      : null
+    reviewPending    = reviewRes?.ok   ? await reviewRes.json()    : []
   } catch (e) {
     if (container.isConnected)
       container.innerHTML = '<div class="dashboard-error">Dashboard konnte nicht geladen werden.</div>'
@@ -2663,6 +2973,8 @@ async function renderDashboard() {
       alerts.push({ color: '#fb923c', icon: 'ph-magnifying-glass', text: `${findingsSummary.byStatus.open} open audit finding(s)`, nav: 'reports' })
     if (findingsSummary?.overdueActions > 0)
       alerts.push({ color: '#f87171', icon: 'ph-magnifying-glass', text: `${findingsSummary.overdueActions} overdue action(s) in findings`, nav: 'reports' })
+    if (reviewPending?.length > 0)
+      alerts.push({ color: '#f59e0b', icon: 'ph-shield-warning', text: `${reviewPending.length} Scan-Risiko(en) warten auf Freigabe`, nav: 'risk' })
     if (alerts.length === 0) return '<p class="dash-empty" style="color:var(--success-text)"><i class="ph ph-check-circle"></i> No critical issues</p>'
     return alerts.map(a => `<div class="dash-alert dash-link" data-nav="${a.nav}" style="border-left:3px solid ${a.color};padding:6px 10px;margin-bottom:6px;background:var(--surface);border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:8px">
       <i class="ph ${a.icon}" style="color:${a.color};font-size:1rem"></i>
@@ -3321,13 +3633,17 @@ async function renderAdminOrgTab() {
   const container = document.getElementById('adminTabPanelOrg')
   if (!container) return
   container.innerHTML = '<p class="report-loading">Loading…</p>'
-  const [orgRes, secRes] = await Promise.all([
+  const [orgRes, secRes, ouRes] = await Promise.all([
     fetch('/admin/org-settings', { headers: apiHeaders() }),
     fetch('/admin/security',     { headers: apiHeaders() }),
+    fetch('/org-units',          { headers: apiHeaders() }),
   ])
   if (!orgRes.ok) { container.innerHTML = '<p class="report-empty">Error loading.</p>'; return }
   const s    = await orgRes.json()
   const sec  = secRes.ok ? await secRes.json() : { require2FA: false }
+  const units = ouRes.ok ? await ouRes.json() : []
+  _ORG_UNITS = units
+  const _ouTypeLabel = { cio: 'CIO', group: 'Group / Central', local: 'Local', external: 'External' }
   const en   = s.emailNotifications || {}
   const smtp = s.smtpSettings || {}
   const nav  = Array.isArray(s.navOrder) && s.navOrder.length ? s.navOrder : _NAV_ORDER_DEFAULT.slice()
@@ -3535,6 +3851,44 @@ async function renderAdminOrgTab() {
       </div>
 
       <p id="orgSaveMsg" style="margin-top:10px;font-size:13px;color:var(--success,#4ade80);display:none"></p>
+
+      <div class="org-section" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h4 class="org-section-title" style="margin:0"><i class="ph ph-tree-structure"></i> Organisational Units</h4>
+          <button class="btn btn-primary btn-sm" onclick="openOrgUnitModal(null)">
+            <i class="ph ph-plus"></i> New Unit
+          </button>
+        </div>
+        <p style="font-size:.82rem;color:var(--text-subtle);margin:0 0 12px">
+          Defines the IT org structure (CIO → GroupIT / GroupApp → Local IT).
+          Used for ownership assignment across all modules (Risks, Assets, Suppliers, BCM, Goals, Findings).
+        </p>
+        <table class="risk-table" style="width:100%;font-size:.85rem">
+          <thead>
+            <tr><th>Name</th><th>Type</th><th>Parent</th><th>Head</th><th>Description</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${units.length === 0
+              ? '<tr><td colspan="6" style="text-align:center;color:var(--text-subtle);padding:12px">No units defined.</td></tr>'
+              : units.map(u => {
+                  const parent = units.find(p => p.id === u.parentId)
+                  const typeBadge = u.type === 'cio' ? 'approved' : u.type === 'group' ? 'review' : u.type === 'local' ? 'draft' : 'archived'
+                  return `<tr>
+                    <td><strong>${escHtml(u.name)}</strong></td>
+                    <td><span class="status-badge status-${typeBadge}">${escHtml(_ouTypeLabel[u.type]||u.type)}</span></td>
+                    <td>${escHtml(parent?.name || '–')}</td>
+                    <td>${escHtml(u.head || '–')}</td>
+                    <td style="color:var(--text-subtle);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(u.description||'')}</td>
+                    <td style="white-space:nowrap">
+                      <button class="btn btn-secondary btn-xs" onclick="openOrgUnitModal('${u.id}')"><i class="ph ph-pencil"></i></button>
+                      <button class="btn btn-danger btn-xs" style="margin-left:4px" onclick="deleteOrgUnit('${u.id}','${escHtml(u.name)}')"><i class="ph ph-trash"></i></button>
+                    </td>
+                  </tr>`
+                }).join('')
+            }
+          </tbody>
+        </table>
+      </div>
     </div>`
 
   // SMTP-Status aus Server holen und Banner zeigen/verstecken
@@ -3954,6 +4308,10 @@ async function clearAuditLog() {
 async function renderAdminMaintenanceTab() {
   const container = document.getElementById('adminTabPanelMaintenance')
   if (!container) return
+  const entRes = await fetch('/entities', { headers: apiHeaders('reader') })
+  const _entities = entRes.ok ? await entRes.json() : []
+  const entityOpts = _entities.filter(e => e.type !== 'holding')
+    .map(e => `<option value="${e.id}">${escHtml(e.name)}</option>`).join('')
   container.innerHTML = `
     <div class="maintenance-panel">
       <div class="admin-lists-panel-header" style="margin-bottom:16px">
@@ -4061,6 +4419,43 @@ async function renderAdminMaintenanceTab() {
           </div>
           <p id="reindexResult" style="margin-top:8px;font-size:13px;display:none"></p>
         </div>
+      </div>
+
+      <div class="maintenance-section" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+        <h4 class="org-section-title"><i class="ph ph-shield-warning"></i> Greenbone Scan-Import</h4>
+        <p class="settings-desc">
+          Importiert einen Greenbone-Sicherheitsbericht (XML oder PDF) als Risiko-Entwürfe.
+          Alle importierten Risiken erhalten den Status <strong>needsReview = true</strong> und
+          müssen von einem Auditor oder CISO geprüft und freigegeben werden,
+          bevor sie im Risikomanagement aktiv sind.
+        </p>
+        <form onsubmit="event.preventDefault();scanImportUpload(this)">
+          <div style="display:flex;flex-direction:column;gap:10px;max-width:520px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="scanImportFile" accept=".xml,.pdf" class="form-input" style="flex:1;min-width:200px" required />
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <div style="flex:1;min-width:160px">
+                <label class="form-label" style="font-size:12px">Gesellschaft (optional)</label>
+                <select id="scanImportEntity" class="select" style="width:100%">
+                  <option value="">— keine Zuordnung —</option>
+                  ${entityOpts}
+                </select>
+              </div>
+              <div style="flex:1;min-width:160px">
+                <label class="form-label" style="font-size:12px">Scan-Referenz (optional)</label>
+                <input type="text" id="scanImportRef" class="form-input" placeholder="z.B. Scan-2026-03" style="width:100%" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button type="submit" id="scanImportBtn" class="btn btn-primary">
+                <i class="ph ph-upload-simple"></i> Importieren
+              </button>
+            </div>
+          </div>
+        </form>
+        <div id="scanImportResult" style="margin-top:12px"></div>
+        <div id="scanImportStatus" style="margin-top:8px;font-size:12px;color:var(--text-subtle)"></div>
       </div>
 
       <div class="maintenance-section" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
@@ -4712,6 +5107,122 @@ async function saveModuleConfig() {
     msg.style.color = 'var(--danger-text)'
     setTimeout(() => { msg.style.display = 'none' }, 3000)
   }
+}
+
+// ── IT Organisationseinheiten (OE) ───────────────────────────────────────────
+
+let _ORG_UNITS = []   // module-level cache, refreshed each render
+
+async function loadOrgUnits() {
+  const res = await fetch('/org-units', { headers: apiHeaders() })
+  _ORG_UNITS = res.ok ? await res.json() : []
+  return _ORG_UNITS
+}
+
+
+async function openOrgUnitModal(id) {
+  const units = _ORG_UNITS.length ? _ORG_UNITS : await loadOrgUnits()
+  const unit = id ? units.find(u => u.id === id) : null
+  const typeOpts = [
+    { v:'cio',      l:'CIO' },
+    { v:'group',    l:'Group / Central' },
+    { v:'local',    l:'Local' },
+    { v:'external', l:'External' },
+  ]
+  const parentOpts = units.filter(u => u.id !== id)
+    .map(u => `<option value="${u.id}" ${unit?.parentId===u.id?'selected':''}>${escHtml(u.name)}</option>`)
+    .join('')
+
+  document.getElementById('orgUnitModal')?.remove()
+  const html = `
+    <div id="orgUnitModal" class="modal" style="visibility:visible">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title"><i class="ph ph-tree-structure"></i> ${unit ? 'Edit' : 'New'} IT Organisational Unit</h3>
+          <button class="modal-close" onclick="document.getElementById('orgUnitModal').remove()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label">Name *</label>
+              <input id="ouName" class="form-input" value="${escHtml(unit?.name||'')}" placeholder="GroupIT">
+            </div>
+            <div>
+              <label class="form-label">Type</label>
+              <select id="ouType" class="select">
+                ${typeOpts.map(t => `<option value="${t.v}" ${unit?.type===t.v?'selected':''}>${t.l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Parent Unit</label>
+            <select id="ouParent" class="select">
+              <option value="">— none (top level) —</option>
+              ${parentOpts}
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label">Head (Person)</label>
+              <input id="ouHead" class="form-input" value="${escHtml(unit?.head||'')}" placeholder="Name">
+            </div>
+            <div>
+              <label class="form-label">E-Mail</label>
+              <input id="ouEmail" class="form-input" type="email" value="${escHtml(unit?.email||'')}" placeholder="it@example.com">
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Description</label>
+            <textarea id="ouDesc" class="form-textarea" rows="2">${escHtml(unit?.description||'')}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="document.getElementById('orgUnitModal').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitOrgUnitModal('${id||''}')">
+            <i class="ph ph-floppy-disk"></i> Save
+          </button>
+        </div>
+      </div>
+    </div>`
+  document.body.insertAdjacentHTML('beforeend', html)
+}
+
+async function submitOrgUnitModal(id) {
+  const name = document.getElementById('ouName')?.value.trim()
+  if (!name) { alert('Name is required'); return }
+  const body = {
+    name,
+    type:        document.getElementById('ouType')?.value  || 'group',
+    parentId:    document.getElementById('ouParent')?.value || null,
+    head:        document.getElementById('ouHead')?.value.trim()  || '',
+    email:       document.getElementById('ouEmail')?.value.trim() || '',
+    description: document.getElementById('ouDesc')?.value.trim()  || '',
+  }
+  if (!body.parentId) body.parentId = null
+  const url    = id ? `/org-units/${id}` : '/org-units'
+  const method = id ? 'PUT' : 'POST'
+  const res = await fetch(url, { method, headers: { ...apiHeaders('admin'), 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  document.getElementById('orgUnitModal')?.remove()
+  _ORG_UNITS = []
+  await renderAdminOrgTab()
+}
+
+async function deleteOrgUnit(id, name) {
+  if (!confirm(`Delete unit "${name}"?`)) return
+  const res = await fetch(`/org-units/${id}`, { method: 'DELETE', headers: apiHeaders('admin') })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  _ORG_UNITS = []
+  await renderAdminOrgTab()
+}
+
+// Public helper: returns org unit options for use in pickers across modules
+async function getOrgUnitOptions(selectedId) {
+  const units = _ORG_UNITS.length ? _ORG_UNITS : await loadOrgUnits()
+  return [
+    `<option value="">— no unit assigned —</option>`,
+    ...units.map(u => `<option value="${u.id}" ${selectedId===u.id?'selected':''}>${escHtml(u.name)}</option>`)
+  ].join('')
 }
 
 // ── Admin: Ende Organisationsdaten / Audit / Wartung ─────────────────────────
@@ -5658,6 +6169,13 @@ async function renderSettingsPanel() {
         ${revSection}
         ${qmSection}
 
+        ${(rank >= ROLE_RANK.contentowner || fns.includes('ciso')) ? `
+        <div class="settings-section" id="tmplMgmtSection" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+          <h3><i class="ph ph-files"></i> Template Management</h3>
+          <p class="settings-desc">All templates grouped by type. Edit or delete draft templates.</p>
+          <div id="tmplMgmtContent"><p class="report-loading">Loading…</p></div>
+        </div>` : ''}
+
         <div class="settings-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
           <p class="settings-desc" style="color:var(--text-subtle);font-size:12px">
             <i class="ph ph-info"></i> System-wide configuration (users, entities, lists, organisation, audit) is located under
@@ -5669,6 +6187,150 @@ async function renderSettingsPanel() {
 
   // 2FA-Status laden und Bereich rendern
   _renderTwofaSettingsBlock()
+
+  // Template Management laden (admin + ciso)
+  if (rank >= ROLE_RANK.contentowner || fns.includes('ciso')) {
+    loadTmplManagement()
+  }
+}
+
+// ── Template Management (Settings) ───────────────────────────────────────────
+
+async function loadTmplManagement() {
+  const el = dom('tmplMgmtContent')
+  if (!el) return
+
+  const rank  = ROLE_RANK[getCurrentRole()] || 0
+  const isAdmin = rank >= ROLE_RANK.admin
+
+  // Fetch all templates (no type filter = all)
+  const res = await fetch('/templates', { headers: apiHeaders() })
+  if (!res.ok) { el.innerHTML = '<p class="report-empty">Error loading templates.</p>'; return }
+  const all = (await res.json()).filter(t => !t.deletedAt)
+
+  if (all.length === 0) { el.innerHTML = '<p class="report-empty">No templates found.</p>'; return }
+
+  // Group by type
+  const byType = {}
+  for (const t of all) {
+    if (!byType[t.type]) byType[t.type] = []
+    byType[t.type].push(t)
+  }
+
+  const statusCls = { draft: 'status-draft', review: 'status-review', approved: 'status-approved', archived: 'status-archived' }
+
+  const sections = Object.entries(byType).map(([type, items]) => {
+    const rows = items.map(t => {
+      const isDraft = t.status === 'draft'
+      const typeIcon = TYPE_ICONS[t.type] || 'ph-file'
+      return `<tr>
+        <td style="color:var(--text-subtle);font-size:.8rem"><i class="ph ${typeIcon}"></i> ${escHtml(t.type)}</td>
+        <td>${escHtml(t.title)}</td>
+        <td><span class="status-badge ${statusCls[t.status]||''}">${t.status}</span></td>
+        <td style="color:var(--text-subtle)">v${t.version}</td>
+        <td style="white-space:nowrap;text-align:right">
+          <button class="btn btn-secondary btn-xs" title="Edit" onclick="tmplMgmtEdit('${escHtml(t.type)}','${t.id}')">
+            <i class="ph ph-pencil"></i>
+          </button>
+          ${isDraft ? `
+            <button class="btn btn-secondary btn-xs" style="margin-left:4px" title="Move to trash" onclick="tmplMgmtSoftDelete('${escHtml(t.type)}','${t.id}','${escHtml(t.title)}')">
+              <i class="ph ph-trash"></i>
+            </button>
+            ${isAdmin ? `
+            <button class="btn btn-danger btn-xs" style="margin-left:4px" title="Permanently delete" onclick="tmplMgmtPermDelete('${escHtml(t.type)}','${t.id}','${escHtml(t.title)}')">
+              <i class="ph ph-trash-simple"></i>
+            </button>` : ''}
+          ` : ''}
+        </td>
+      </tr>`
+    }).join('')
+
+    return `
+      <div style="margin-bottom:20px">
+        <h4 style="font-size:.88rem;font-weight:600;color:var(--text-muted);margin:0 0 6px;display:flex;align-items:center;gap:6px">
+          <i class="ph ${TYPE_ICONS[type]||'ph-file'}"></i> ${escHtml(type)}
+          <span style="font-weight:400;color:var(--text-subtle)">(${items.length})</span>
+        </h4>
+        <table class="risk-table" style="width:100%;font-size:.85rem">
+          <thead><tr>
+            <th style="width:110px">Type</th>
+            <th>Title</th>
+            <th style="width:100px">Status</th>
+            <th style="width:60px">Version</th>
+            <th style="width:120px"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`
+  }).join('')
+
+  el.innerHTML = sections
+
+  // Trash section for admin: show deleted templates with restore option
+  if (isAdmin) {
+    const trashRes = await fetch('/trash', { headers: apiHeaders() })
+    if (trashRes.ok) {
+      const trash = await trashRes.json()
+      const deletedTmpls = (trash.templates || [])
+      if (deletedTmpls.length > 0) {
+        const trashRows = deletedTmpls.map(t => `<tr>
+          <td style="color:var(--text-subtle);font-size:.8rem"><i class="ph ${TYPE_ICONS[t.type]||'ph-file'}"></i> ${escHtml(t.type)}</td>
+          <td>${escHtml(t.title)}</td>
+          <td><span class="status-badge status-archived">deleted</span></td>
+          <td style="white-space:nowrap;text-align:right">
+            <button class="btn btn-secondary btn-xs" title="Restore" onclick="tmplMgmtRestore('${escHtml(t.type)}','${t.id}','${escHtml(t.title)}')">
+              <i class="ph ph-arrow-counter-clockwise"></i>
+            </button>
+            <button class="btn btn-danger btn-xs" style="margin-left:4px" title="Permanently delete" onclick="tmplMgmtPermDelete('${escHtml(t.type)}','${t.id}','${escHtml(t.title)}')">
+              <i class="ph ph-trash-simple"></i>
+            </button>
+          </td>
+        </tr>`).join('')
+        el.innerHTML += `
+          <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+            <h4 style="font-size:.88rem;font-weight:600;color:var(--danger-text,#f87171);margin:0 0 6px;display:flex;align-items:center;gap:6px">
+              <i class="ph ph-trash"></i> Trash (${deletedTmpls.length})
+            </h4>
+            <table class="risk-table" style="width:100%;font-size:.85rem">
+              <thead><tr>
+                <th style="width:110px">Type</th><th>Title</th><th style="width:100px">Status</th><th style="width:120px"></th>
+              </tr></thead>
+              <tbody>${trashRows}</tbody>
+            </table>
+          </div>`
+      }
+    }
+  }
+}
+
+async function tmplMgmtEdit(type, id) {
+  // Navigate to the template in the editor
+  selectType(type)
+  setTimeout(async () => {
+    const res = await fetch(`/template/${encodeURIComponent(type)}/${encodeURIComponent(id)}`, { headers: apiHeaders() })
+    if (res.ok) loadTemplate(await res.json())
+  }, 150)
+}
+
+async function tmplMgmtSoftDelete(type, id, title) {
+  if (!confirm(`Template "${title}" in den Papierkorb verschieben?`)) return
+  const res = await fetch(`/template/${encodeURIComponent(type)}/${encodeURIComponent(id)}`, { method: 'DELETE', headers: apiHeaders('contentowner') })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  loadTmplManagement()
+}
+
+async function tmplMgmtPermDelete(type, id, title) {
+  if (!confirm(`Template "${title}" endgültig löschen? Dies kann nicht rückgängig gemacht werden.`)) return
+  const res = await fetch(`/template/${encodeURIComponent(type)}/${encodeURIComponent(id)}/permanent`, { method: 'DELETE', headers: apiHeaders('admin') })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  loadTmplManagement()
+}
+
+async function tmplMgmtRestore(type, id, title) {
+  if (!confirm(`Template "${title}" wiederherstellen?`)) return
+  const res = await fetch(`/template/${encodeURIComponent(type)}/${encodeURIComponent(id)}/restore`, { method: 'POST', headers: apiHeaders('admin') })
+  if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Error'); return }
+  loadTmplManagement()
 }
 
 async function saveMyPassword() {
@@ -5886,6 +6548,12 @@ async function saveIcsSettings() {
 }
 
 function loadTemplate(t) {
+  // Make sure the editor area is visible (may have been hidden by a module section)
+  const editorCard = dom('editorCard')
+  const listPanel  = dom('listPanel')
+  if (editorCard) editorCard.style.display = ''
+  if (listPanel)  listPanel.style.display  = ''
+
   currentTemplate = t
   dom('inputTitle').value = t.title
   dom('contentEditor').value = t.content
@@ -6620,6 +7288,9 @@ async function renderGuidance() {
           <i class="ph ${c.icon}"></i> ${c.label}
         </button>
       `).join('')}
+      <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="printGuidanceCategory()" title="Alle Dokumente dieser Kategorie als PDF drucken">
+        <i class="ph ph-printer"></i> Alle drucken
+      </button>
     </div>
     <div class="guidance-body">
       <div class="guidance-list-col">
@@ -6716,6 +7387,10 @@ function renderGuidanceDoc(doc) {
       <span class="badge" style="background:var(--surface-raised);color:var(--text-subtle);font-size:11px;">
         v${doc.version || 1}
       </span>
+      ${doc.type === 'markdown' || doc.type === 'html' ? `
+        <button class="btn btn-secondary btn-sm" onclick="printGuidanceDoc('${doc.id}')" title="Dieses Dokument als PDF drucken">
+          <i class="ph ph-file-pdf"></i> PDF
+        </button>` : ''}
       ${canEdit ? `<button class="btn btn-secondary btn-sm" onclick="openGuidanceEditor(${JSON.stringify(doc).replace(/"/g,"'")})">
         <i class="ph ph-pencil"></i> Edit
       </button>` : ''}
@@ -6725,6 +7400,63 @@ function renderGuidanceDoc(doc) {
     </div>
     <div class="guidance-viewer-body">${bodyHtml}</div>
   `
+}
+
+function printGuidanceDoc(docId) {
+  const doc = _guidanceDocs.find(d => d.id === docId)
+  if (!doc) return
+  _printGuidanceDocs([doc])
+}
+
+function printGuidanceCategory() {
+  const docs = _guidanceDocs.filter(d => d.type === 'markdown' || d.type === 'html')
+  if (docs.length === 0) return alert('Keine druckbaren Dokumente in dieser Kategorie.')
+  _printGuidanceDocs(docs)
+}
+
+function _printGuidanceDocs(docs) {
+  const catLabel = GUIDANCE_CATS.find(c => c.id === _guidanceCat)?.label || _guidanceCat
+  const title = docs.length === 1
+    ? docs[0].title
+    : `ISMS Builder – ${catLabel} (${docs.length} Dokumente)`
+
+  const bodyParts = docs.map(doc => {
+    const html = (typeof marked !== 'undefined')
+      ? marked.parse(doc.content || '')
+      : `<pre>${escHtml(doc.content || '')}</pre>`
+    return `<section class="doc-section">
+      <h1 class="doc-title">${escHtml(doc.title)}</h1>
+      <div class="doc-body">${html}</div>
+    </section>`
+  }).join('<div class="page-break"></div>')
+
+  const win = window.open('', '_blank')
+  if (!win) return alert('Pop-up blockiert – bitte Pop-ups für diese Seite erlauben.')
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>${escHtml(title)}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; max-width: 900px; }
+      h1.doc-title { font-size: 18px; border-bottom: 2px solid #333; padding-bottom: 6px; margin-top: 0; }
+      h1,h2,h3 { margin-top: 1.2em; }
+      h2 { font-size: 15px; } h3 { font-size: 13px; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 11px; }
+      th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+      th { background: #f0f0f0; font-weight: bold; }
+      pre, code { background: #f5f5f5; padding: 2px 4px; font-size: 11px; border-radius: 3px; }
+      pre { padding: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+      .page-break { page-break-after: always; margin: 32px 0; border-top: 1px dashed #ccc; }
+      .doc-section { margin-bottom: 24px; }
+      @media print { .page-break { page-break-after: always; } body { margin: 0; } }
+    </style>
+  </head><body>
+    <div style="font-size:10px;color:#999;margin-bottom:16px">
+      ISMS Builder · ${escHtml(catLabel)} · ${new Date().toLocaleDateString('de-DE')}
+    </div>
+    ${bodyParts}
+    <script>window.onload = () => { window.print() }<\/script>
+  </body></html>`)
+  win.document.close()
 }
 
 function switchGuidanceCat(cat) {
@@ -7184,6 +7916,47 @@ const RISK_LEVEL_CFG = {
   critical: { label:'Critical', cls:'risk-critical' },
 }
 
+/* CVSS v3.1 Severity Bands — FIRST.org (freely usable, attribution recommended)
+ * https://www.first.org/cvss/specification-document */
+const CVSS_BANDS = [
+  { min: 9.0, max: 10.0, label: 'Critical', cls: 'cvss-critical', color: '#dc2626',
+    desc: 'Kritisch: Schwachstelle ermöglicht vollständige Systemkompromittierung, oft ohne Authentifizierung und Nutzerinteraktion (z.B. Remote Code Execution).' },
+  { min: 7.0, max:  8.9, label: 'High',     cls: 'cvss-high',     color: '#ea580c',
+    desc: 'Hoch: Erheblicher Schaden möglich. Angreifer können wichtige Ressourcen kontrollieren oder vertrauliche Daten auslesen.' },
+  { min: 4.0, max:  6.9, label: 'Medium',   cls: 'cvss-medium',   color: '#ca8a04',
+    desc: 'Mittel: Eingeschränkter Schaden oder Ausnutzung erfordert bestimmte Vorbedingungen (z.B. Netzwerkzugang, Benutzerinteraktion).' },
+  { min: 0.1, max:  3.9, label: 'Low',      cls: 'cvss-low',      color: '#16a34a',
+    desc: 'Niedrig: Minimaler Schaden, schwer ausnutzbar oder starke einschränkende Faktoren vorhanden.' },
+  { min: 0.0, max:  0.0, label: 'None',     cls: 'cvss-none',     color: '#6b7280',
+    desc: 'Kein Risiko: Keine Auswirkung auf Vertraulichkeit, Integrität oder Verfügbarkeit.' },
+]
+
+function cvssInfo(score) {
+  if (score == null || isNaN(score)) return null
+  const s = parseFloat(score)
+  return CVSS_BANDS.find(b => s >= b.min && s <= b.max) || CVSS_BANDS[CVSS_BANDS.length - 1]
+}
+
+function cvssBadgeHtml(score) {
+  if (score == null || isNaN(score)) return ''
+  const info = cvssInfo(score)
+  const pct  = Math.round((parseFloat(score) / 10) * 100)
+  return `<span class="cvss-badge ${info.cls}" title="${info.desc}">CVSS ${parseFloat(score).toFixed(1)} — ${info.label}</span>`
+}
+
+function cvssBarHtml(score) {
+  if (score == null || isNaN(score)) return ''
+  const info = cvssInfo(score)
+  const pct  = Math.round((parseFloat(score) / 10) * 100)
+  return `
+    <div class="cvss-bar-wrap" title="CVSS ${parseFloat(score).toFixed(1)} / 10">
+      <div class="cvss-bar-track">
+        <div class="cvss-bar-fill" style="width:${pct}%;background:${info.color}"></div>
+      </div>
+      <span class="cvss-bar-label" style="color:${info.color}">${parseFloat(score).toFixed(1)}</span>
+    </div>`
+}
+
 let _riskTab = 'register'
 let _riskFilterCat = ''
 let _riskFilterStatus = ''
@@ -7270,9 +8043,12 @@ async function renderRiskRegister(el) {
           const cat = RISK_CATS.find(c => c.id === r.category)
           const st  = RISK_STATUSES.find(s => s.id === r.status)
           const tr  = RISK_TREATMENTS.find(t => t.id === r.treatmentOption)
-          return `<tr class="risk-row" onclick="openRiskDetail('${r.id}')">
-            <td><span class="risk-badge ${lv.cls}">${lv.label}</span></td>
-            <td class="risk-title-cell">${escHtml(r.title)}</td>
+          return `<tr class="risk-row${r.needsReview ? ' risk-needs-review' : ''}" onclick="openRiskDetail('${r.id}')">
+            <td style="white-space:nowrap">
+              <span class="risk-badge ${lv.cls}">${lv.label}</span>
+              ${r.cvssScore != null ? cvssBadgeHtml(r.cvssScore) : ''}
+            </td>
+            <td class="risk-title-cell">${escHtml(r.title)}${r.needsReview ? ' <span class="badge-review-pending" title="Freigabe erforderlich">&#9888; Review</span>' : ''}</td>
             <td>${escHtml(cat?.label || r.category)}</td>
             <td class="risk-score-cell">${r.probability} × ${r.impact} = <strong>${r.score}</strong></td>
             <td>${escHtml(tr?.label || r.treatmentOption)}</td>
@@ -7407,7 +8183,7 @@ async function renderRiskTreatments(el) {
     ${rows.length === 0 ? '<p class="risk-empty">No treatment measures recorded.</p>' : `
     <table class="risk-table">
       <thead><tr>
-        <th>Measure</th><th>Risk</th><th>Responsible</th>
+        <th>Measure</th><th>Risk</th><th>Responsible</th><th>Unit (OE)</th>
         <th>Due Date</th><th>Status</th>
         ${canManageRisks() ? '<th style="width:90px;"></th>' : ''}
       </tr></thead>
@@ -7415,10 +8191,12 @@ async function renderRiskTreatments(el) {
         ${rows.map(tp => {
           const overdue = tp.dueDate && tp.dueDate < today && tp.status !== 'completed'
           const lv = RISK_LEVEL_CFG[tp.riskLevel] || { cls:'' }
+          const ouName = tp.orgUnitId ? (_ORG_UNITS.find(u => u.id === tp.orgUnitId)?.name || tp.orgUnitId) : '—'
           return `<tr>
             <td>${escHtml(tp.title)}<br><small style="color:var(--text-subtle)">${escHtml(tp.description || '')}</small></td>
             <td><span class="risk-badge ${lv.cls}" style="font-size:10px;">${escHtml(tp.riskTitle)}</span></td>
             <td>${escHtml(tp.responsible || '—')}</td>
+            <td>${escHtml(ouName)}</td>
             <td class="${overdue ? 'risk-overdue' : ''}">${tp.dueDate ? new Date(tp.dueDate).toLocaleDateString('en-GB') : '—'}</td>
             <td><span class="risk-tp-status risk-tp-${tp.status}">${statusLabel[tp.status] || tp.status}</span></td>
             ${canManageRisks() ? `<td>
@@ -7481,9 +8259,17 @@ async function renderRiskCalendar(el) {
 // ── Reports ──
 
 async function renderRiskReports(el) {
-  const res = await fetch('/risks/summary', { headers: apiHeaders() })
-  const s = res.ok ? await res.json() : null
+  const [sumRes, allRes, pendingRes] = await Promise.all([
+    fetch('/risks/summary',        { headers: apiHeaders() }),
+    fetch('/risks',                { headers: apiHeaders() }),
+    fetch('/risks/review-pending', { headers: apiHeaders() }),
+  ])
+  const s       = sumRes.ok     ? await sumRes.json()     : null
+  const allRisks = allRes.ok    ? await allRes.json()     : []
+  const pending  = pendingRes.ok ? await pendingRes.json() : []
   if (!s) { el.innerHTML = '<p class="report-error">Error loading</p>'; return }
+
+  const scanRisks = allRisks.filter(r => r.source === 'greenbone-scan')
 
   const bar = (val, max, cls) => `
     <div class="risk-report-bar-wrap">
@@ -7544,108 +8330,220 @@ async function renderRiskReports(el) {
           <tbody>${top5rows || '<tr><td colspan="4" style="color:var(--text-subtle)">No risks</td></tr>'}</tbody>
         </table>
       </div>
+      ${pending.length > 0 ? `
+      <div class="risk-report-card risk-report-full scan-review-banner" style="border-color:#f59e0b">
+        <h4><i class="ph ph-shield-warning" style="color:#f59e0b"></i> Freigabe ausstehend (${pending.length})</h4>
+        <table class="risk-table">
+          <thead><tr><th>Titel</th><th>CVSS</th><th>Schweregrad</th><th>Host</th><th>CVEs</th><th>Aktion</th></tr></thead>
+          <tbody>${pending.map(r => `<tr>
+            <td>${escHtml(r.title)}</td>
+            <td>${r.cvssScore != null ? cvssBadgeHtml(r.cvssScore) : '—'}</td>
+            <td><span class="risk-badge ${RISK_LEVEL_CFG[r.riskLevel]?.cls||''}">${RISK_LEVEL_CFG[r.riskLevel]?.label||r.riskLevel||'—'}</span></td>
+            <td style="font-size:.8rem;color:var(--text-muted)">${escHtml(r.scanRef||'')}</td>
+            <td style="font-size:.8rem">${(r.cveIds||[]).join(', ')||'—'}</td>
+            <td><button class="btn btn-primary btn-sm" onclick="approveRisk('${r.id}')"><i class="ph ph-check"></i> Freigeben</button></td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+      ${scanRisks.length > 0 ? `
+      <div class="risk-report-card risk-report-full">
+        <h4><i class="ph ph-scan" style="color:#3b82f6"></i> Scan-Importe (${scanRisks.length} freigegeben)</h4>
+        <table class="risk-table">
+          <thead><tr><th>Titel</th><th>CVSS</th><th>Schweregrad</th><th>CVEs</th><th>Score</th><th>Status</th><th>Genehmigt von</th></tr></thead>
+          <tbody>${scanRisks.map(r => `<tr onclick="openRiskDetail('${r.id}')" style="cursor:pointer">
+            <td>${escHtml(r.title)}</td>
+            <td>${r.cvssScore != null ? cvssBadgeHtml(r.cvssScore) : '—'}</td>
+            <td><span class="risk-badge ${RISK_LEVEL_CFG[r.riskLevel]?.cls||''}">${RISK_LEVEL_CFG[r.riskLevel]?.label||r.riskLevel||'—'}</span></td>
+            <td style="font-size:.8rem">${(r.cveIds||[]).join(', ')||'—'}</td>
+            <td style="text-align:center">${r.score ?? '—'}</td>
+            <td><span class="risk-status-badge risk-st-${r.status}">${RISK_STATUSES.find(x=>x.id===r.status)?.label||r.status}</span></td>
+            <td style="font-size:.8rem;color:var(--text-muted)">${escHtml(r.approvedBy||'—')}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
     </div>`
 }
 
 // ── Risk Detail ──
 
 async function openRiskDetail(id) {
-  const res = await fetch(`/risks/${id}`, { headers: apiHeaders() })
+  const [res, entRes] = await Promise.all([
+    fetch(`/risks/${id}`, { headers: apiHeaders() }),
+    fetch('/entities', { headers: apiHeaders() })
+  ])
   if (!res.ok) return
   const r = await res.json()
+  const entities = entRes.ok ? await entRes.json() : []
+  const entityMap = Object.fromEntries(entities.map(e => [e.id, e.name]))
   const lv  = RISK_LEVEL_CFG[r.riskLevel] || { label: r.riskLevel, cls: '' }
   const cat = RISK_CATS.find(c => c.id === r.category)
   const tr  = RISK_TREATMENTS.find(t => t.id === r.treatmentOption)
   const st  = RISK_STATUSES.find(s => s.id === r.status)
   const tpStatusLabel = { open:'Open', in_progress:'In Progress', completed:'Completed' }
 
-  document.getElementById('riskDetailModal')?.remove()
-  const html = `
-    <div id="riskDetailModal" class="modal" style="visibility:visible;">
-      <div class="modal-content modal-xl">
-        <div class="modal-header">
-          <h3 class="modal-title">
-            <span class="risk-badge ${lv.cls}">${lv.label}</span>
-            ${escHtml(r.title)}
-          </h3>
-          <button class="modal-close" onclick="document.getElementById('riskDetailModal').remove()"><i class="ph ph-x"></i></button>
-        </div>
-        <div class="modal-body risk-detail-body">
-          <div class="risk-detail-grid">
-            <div class="risk-detail-section">
-              <h4>${t('risk_descHeading')}</h4>
-              <p>${escHtml(r.description || '—')}</p>
-              <div class="risk-detail-row"><label>${t('risk_threat')}</label><span>${escHtml(r.threat || '—')}</span></div>
-              <div class="risk-detail-row"><label>${t('risk_vulnerability')}</label><span>${escHtml(r.vulnerability || '—')}</span></div>
-              ${r.mitigationNotes ? `<div class="risk-detail-row risk-detail-mitigation">
-                <label>${t('risk_mitigation')}</label>
-                <span>${escHtml(r.mitigationNotes)}</span>
-              </div>` : ''}
-            </div>
-            <div class="risk-detail-section">
-              <h4>${t('risk_assessment')}</h4>
-              <div class="risk-detail-row"><label>Category</label><span>${escHtml(cat?.label||r.category)}</span></div>
-              <div class="risk-detail-row"><label>${t('risk_probability')}</label><span>${r.probability} / 5</span></div>
-              <div class="risk-detail-row"><label>${t('risk_impact')}</label><span>${r.impact} / 5</span></div>
-              <div class="risk-detail-row"><label>Score</label><span><strong>${r.score}</strong> — <span class="risk-badge ${lv.cls}">${lv.label}</span></span></div>
-              <div class="risk-detail-row"><label>${t('risk_treatmentOpt')}</label><span>${escHtml(tr?.label||r.treatmentOption)}</span></div>
-              <div class="risk-detail-row"><label>Status</label><span class="risk-status-badge risk-st-${r.status}">${st?.label||r.status}</span></div>
-              <div class="risk-detail-row"><label>Owner</label><span>${escHtml(r.owner||'—')}</span></div>
-              <div class="risk-detail-row"><label>Due Date</label><span>${r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-GB') : '—'}</span></div>
-              <div class="risk-detail-row"><label>Review</label><span>${r.reviewDate ? new Date(r.reviewDate).toLocaleDateString('en-GB') : '—'}</span></div>
-            </div>
+  const el = dom('riskTabContent')
+  if (!el) return
+  el.innerHTML = `
+    <div class="training-form-page">
+      <div class="training-form-header">
+        <button class="btn btn-secondary btn-sm" onclick="switchRiskTab('register')">
+          <i class="ph ph-arrow-left"></i> Zurück
+        </button>
+        <h2 style="margin:0;flex:1;font-size:1.1rem;display:flex;align-items:center;gap:8px;">
+          <span class="risk-badge ${lv.cls}">${lv.label}</span>
+          ${escHtml(r.title)}
+        </h2>
+        ${canEditRisk(r) ? `<button class="btn btn-secondary btn-sm" onclick="openRiskModal('${r.id}')">
+          <i class="ph ph-pencil"></i> Bearbeiten
+        </button>` : ''}
+      </div>
+
+      ${r.needsReview ? `<div class="scan-review-banner" style="margin-bottom:16px">
+        <i class="ph ph-warning"></i>
+        <span><strong>Freigabe erforderlich</strong> — Dieses Risiko wurde automatisch durch einen Scan-Import erstellt und muss geprüft und freigegeben werden.</span>
+        ${canManageRisks() ? `<button class="btn btn-primary btn-sm" onclick="approveRisk('${r.id}')"><i class="ph ph-check-circle"></i> Freigeben</button>` : ''}
+      </div>` : ''}
+
+      ${r.source === 'greenbone-scan' ? (() => {
+        const ci = cvssInfo(r.cvssScore)
+        return `<div class="cvss-detail-card" style="margin-bottom:16px">
+          <div class="cvss-detail-header">
+            <i class="ph ph-magnifying-glass"></i>
+            <span class="cvss-detail-source">Greenbone Scan-Import</span>
+            ${r.cvssScore != null ? `
+              <span class="cvss-badge ${ci?.cls}"
+                style="font-size:.95rem;padding:3px 12px">
+                CVSS ${parseFloat(r.cvssScore).toFixed(1)} — ${ci?.label}
+              </span>
+              ${cvssBarHtml(r.cvssScore)}
+            ` : ''}
           </div>
-          <div class="risk-detail-section">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <h4 style="margin:0;flex:1;">Treatment Measures (${(r.treatmentPlans||[]).length})</h4>
-              ${canManageRisks() ? `<button class="btn btn-primary btn-sm" onclick="openTreatmentModal('${r.id}',null)">
-                <i class="ph ph-plus"></i> Measure
-              </button>` : ''}
-            </div>
-            <div id="riskDetailTps">
-              ${(r.treatmentPlans||[]).length === 0 ? `<p style="color:var(--text-subtle);font-size:13px;">${t('risk_noMeasures')}</p>` :
-                r.treatmentPlans.map(tp => {
-                  _tpCache[tp.id] = { ...tp, riskId: r.id }
-                  return `
-                  <div class="risk-tp-card">
-                    <div class="risk-tp-header">
-                      <strong>${escHtml(tp.title)}</strong>
-                      <span class="risk-tp-status risk-tp-${tp.status}">${tpStatusLabel[tp.status]||tp.status}</span>
-                      ${canManageRisks() ? `
-                        <button class="btn btn-secondary btn-sm" title="Edit" onclick="openTreatmentModal('${r.id}','${tp.id}')"><i class="ph ph-pencil"></i></button>
-                        <button class="btn btn-sm" style="color:var(--danger-text)" title="Löschen" onclick="deleteTreatment('${r.id}','${tp.id}')"><i class="ph ph-trash"></i></button>
-                      ` : ''}
-                    </div>
-                    <div class="risk-tp-meta">
-                      ${escHtml(tp.description||'')}
-                      ${tp.responsible ? `· <i class="ph ph-user"></i> ${escHtml(tp.responsible)}` : ''}
-                      ${tp.dueDate ? `· <i class="ph ph-calendar"></i> ${new Date(tp.dueDate).toLocaleDateString('en-GB')}` : ''}
-                    </div>
-                  </div>`}).join('')}
-            </div>
-          </div>
-          ${r.linkedControls?.length ? `<div class="risk-detail-section">
-            <h4>Linked SoA Controls (${r.linkedControls.length})</h4>
-            <div class="tmpl-controls-bar" style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${r.linkedControls.map(c => `<span class="tmpl-bar-pill">${escHtml(c)}</span>`).join('')}
-            </div>
+          ${ci ? `<p class="cvss-detail-desc">${ci.desc}</p>` : ''}
+          ${r.cveIds?.length ? `<div class="cvss-cve-row">
+            <span class="cvss-cve-label">CVEs:</span>
+            ${r.cveIds.map(c => `<span class="cvss-cve-chip">${escHtml(c)}</span>`).join('')}
           </div>` : ''}
-          ${r.applicableEntities?.length ? `<div class="risk-detail-section">
-            <h4>Applicable to Entities</h4>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${r.applicableEntities.map(e => `<span class="tmpl-bar-pill"><i class="ph ph-buildings"></i> ${escHtml(e)}</span>`).join('')}
-            </div>
+          <p class="cvss-detail-source-note">Einstufung nach CVSS v3.1 — <a href="https://www.first.org/cvss/" target="_blank" rel="noopener" style="color:var(--accent)">FIRST.org</a></p>
+        </div>`
+      })() : ''}
+
+      <div class="risk-detail-grid">
+        <div class="risk-detail-section">
+          <h4>${t('risk_descHeading')}</h4>
+          <p style="white-space:pre-wrap;font-size:.88rem">${escHtml(r.description || '—')}</p>
+          <div class="risk-detail-row"><label>${t('risk_threat')}</label><span>${escHtml(r.threat || '—')}</span></div>
+          <div class="risk-detail-row"><label>${t('risk_vulnerability')}</label><span>${escHtml(r.vulnerability || '—')}</span></div>
+          ${r.mitigationNotes ? `<div class="risk-detail-row risk-detail-mitigation">
+            <label>${t('risk_mitigation')}</label>
+            <span>${escHtml(r.mitigationNotes)}</span>
           </div>` : ''}
         </div>
-        <div class="modal-footer">
-          ${canEditRisk(r) ? `<button class="btn btn-secondary" onclick="document.getElementById('riskDetailModal').remove();openRiskModal('${r.id}')">
-            <i class="ph ph-pencil"></i> Edit
-          </button>` : ''}
-          <button class="btn btn-primary" onclick="document.getElementById('riskDetailModal').remove()">Close</button>
+        <div class="risk-detail-section">
+          <h4>${t('risk_assessment')}</h4>
+          <div class="risk-detail-row"><label>Kategorie</label><span>${escHtml(cat?.label||r.category)}</span></div>
+          <div class="risk-detail-row"><label>${t('risk_probability')}</label><span>${r.probability} / 5</span></div>
+          <div class="risk-detail-row"><label>${t('risk_impact')}</label><span>${r.impact} / 5</span></div>
+          <div class="risk-detail-row"><label>Score</label><span><strong>${r.score}</strong> — <span class="risk-badge ${lv.cls}">${lv.label}</span></span></div>
+          <div class="risk-detail-row"><label>${t('risk_treatmentOpt')}</label><span>${escHtml(tr?.label||r.treatmentOption)}</span></div>
+          <div class="risk-detail-row"><label>Status</label><span class="risk-status-badge risk-st-${r.status}">${st?.label||r.status}</span></div>
+          <div class="risk-detail-row"><label>Owner</label><span>${escHtml(r.owner||'—')}</span></div>
+          <div class="risk-detail-row"><label>Fälligkeit</label><span>${r.dueDate ? new Date(r.dueDate).toLocaleDateString('de-DE') : '—'}</span></div>
+          <div class="risk-detail-row"><label>Review</label><span>${r.reviewDate ? new Date(r.reviewDate).toLocaleDateString('de-DE') : '—'}</span></div>
         </div>
       </div>
+
+      <div class="risk-detail-section" style="margin-top:20px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <h4 style="margin:0;flex:1;">Behandlungsmaßnahmen (${(r.treatmentPlans||[]).length})</h4>
+          ${canManageRisks() ? `<button class="btn btn-primary btn-sm" onclick="openTreatmentModal('${r.id}',null)">
+            <i class="ph ph-plus"></i> Maßnahme
+          </button>` : ''}
+        </div>
+        <div id="riskDetailTps">
+          ${(r.treatmentPlans||[]).length === 0
+            ? `<p style="color:var(--text-subtle);font-size:13px;">${t('risk_noMeasures')}</p>`
+            : r.treatmentPlans.map(tp => {
+                _tpCache[tp.id] = { ...tp, riskId: r.id }
+                return `<div class="risk-tp-card">
+                  <div class="risk-tp-header">
+                    <strong>${escHtml(tp.title)}</strong>
+                    <span class="risk-tp-status risk-tp-${tp.status}">${tpStatusLabel[tp.status]||tp.status}</span>
+                    ${canManageRisks() ? `
+                      <button class="btn btn-secondary btn-sm" onclick="openTreatmentModal('${r.id}','${tp.id}')"><i class="ph ph-pencil"></i></button>
+                      <button class="btn btn-sm" style="color:var(--danger-text)" onclick="deleteTreatment('${r.id}','${tp.id}')"><i class="ph ph-trash"></i></button>
+                    ` : ''}
+                  </div>
+                  <div class="risk-tp-meta">
+                    ${escHtml(tp.description||'')}
+                    ${tp.responsible ? `· <i class="ph ph-user"></i> ${escHtml(tp.responsible)}` : ''}
+                    ${tp.orgUnitId ? `· <i class="ph ph-tree-structure"></i> ${escHtml(_ORG_UNITS.find(u=>u.id===tp.orgUnitId)?.name||tp.orgUnitId)}` : ''}
+                    ${tp.dueDate ? `· <i class="ph ph-calendar"></i> ${new Date(tp.dueDate).toLocaleDateString('de-DE')}` : ''}
+                  </div>
+                </div>`
+              }).join('')}
+        </div>
+      </div>
+
+      ${r.linkedControls?.length ? `<div class="risk-detail-section" style="margin-top:16px">
+        <h4>Verknüpfte SoA-Controls (${r.linkedControls.length})</h4>
+        <div class="tmpl-controls-bar" style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${r.linkedControls.map(c => `<span class="tmpl-bar-pill">${escHtml(c)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      ${r.applicableEntities?.length ? `<div class="risk-detail-section" style="margin-top:16px">
+        <h4>Gültig für Gesellschaften</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${r.applicableEntities.map(e => `<span class="tmpl-bar-pill"><i class="ph ph-buildings"></i> ${escHtml(entityMap[e] || e)}</span>`).join('')}
+        </div>
+      </div>` : ''}
     </div>`
-  document.body.insertAdjacentHTML('beforeend', html)
+}
+
+async function approveRisk(id) {
+  const res = await fetch(`/risks/${id}/approve`, { method: 'POST', headers: apiHeaders() })
+  if (!res.ok) return alert('Freigabe fehlgeschlagen')
+  await openRiskDetail(id)
+}
+
+// ── Scan-Import Upload (Admin Wartung) ────────────────────────────────────────
+async function scanImportUpload(formEl) {
+  const file     = formEl.querySelector('#scanImportFile').files[0]
+  const entityId = formEl.querySelector('#scanImportEntity')?.value || ''
+  const scanRef  = formEl.querySelector('#scanImportRef')?.value || ''
+  if (!file) return alert('Bitte eine Datei auswählen')
+
+  const fd = new FormData()
+  fd.append('file', file)
+  if (entityId) fd.append('entityId', entityId)
+  if (scanRef)  fd.append('scanRef', scanRef)
+
+  const btn = formEl.querySelector('#scanImportBtn')
+  btn.disabled = true
+  btn.textContent = 'Importiere…'
+
+  try {
+    const res  = await fetch('/admin/scan-import/upload', { method: 'POST', headers: { Authorization: apiHeaders().Authorization }, body: fd })
+    const data = await res.json()
+    if (!res.ok) { alert('Fehler: ' + (data.error || res.status)); return }
+    const resultEl = document.getElementById('scanImportResult')
+    if (resultEl) resultEl.innerHTML = `
+      <div class="scan-import-result ok">
+        <strong>Import erfolgreich</strong><br>
+        Gefundene Findings: ${data.findings} &nbsp;|&nbsp;
+        Geclusterte Risiken: ${data.clusters} &nbsp;|&nbsp;
+        Erstellt: <strong>${data.created}</strong> &nbsp;|&nbsp;
+        Übersprungen (Duplikat): ${data.skipped}
+        <br><small>Methode: ${data.parseMethod?.toUpperCase()}</small>
+      </div>`
+  } catch (e) {
+    alert('Netzwerkfehler: ' + e.message)
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Importieren'
+  }
 }
 
 // ── Risk Create/Edit – Vollseite ──
@@ -7910,12 +8808,15 @@ async function submitRiskForm() {
     applicableEntities
   }
 
-  const url    = _riskEditId ? `/risks/${_riskEditId}` : '/risks'
-  const method = _riskEditId ? 'PUT' : 'POST'
+  const editId = _riskEditId
+  const url    = editId ? `/risks/${editId}` : '/risks'
+  const method = editId ? 'PUT' : 'POST'
   const res = await fetch(url, { method, headers: apiHeaders(), body: JSON.stringify(body) })
   if (!res.ok) { const e = await res.json(); return show(e.error || 'Error saving') }
+  const saved = await res.json()
   _riskEditId = null
-  renderRisk()
+  if (editId) await openRiskDetail(saved.id)
+  else renderRisk()
 }
 
 async function deleteRisk(id) {
@@ -7927,13 +8828,14 @@ async function deleteRisk(id) {
 
 // ── Treatment Plan Modal ──
 
-function openTreatmentModal(riskId, tpOrId) {
+async function openTreatmentModal(riskId, tpOrId) {
   // tpOrId can be null (new), a tp ID string (edit via cache), or a tp object
   let tp = null
   if (tpOrId) {
     tp = (typeof tpOrId === 'string') ? (_tpCache[tpOrId] || null) : tpOrId
   }
   document.getElementById('treatmentModal')?.remove()
+  const ouOpts = await getOrgUnitOptions(tp?.orgUnitId || '')
   const html = `
     <div id="treatmentModal" class="modal" style="visibility:visible;">
       <div class="modal-content">
@@ -7952,21 +8854,27 @@ function openTreatmentModal(riskId, tpOrId) {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
-              <label class="form-label">Responsible</label>
+              <label class="form-label">Responsible (Person)</label>
               <input id="tpResp" class="form-input" value="${escHtml(tp?.responsible||'')}" placeholder="Name or role" />
             </div>
+            <div>
+              <label class="form-label">Responsible Unit (OE)</label>
+              <select id="tpOrgUnit" class="select">${ouOpts}</select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
               <label class="form-label">Due Date</label>
               <input id="tpDue" class="form-input" type="date" value="${tp?.dueDate||''}" />
             </div>
-          </div>
-          <div>
-            <label class="form-label">Status</label>
-            <select id="tpStatus" class="select">
-              <option value="open"        ${tp?.status==='open'?'selected':''}>Open</option>
-              <option value="in_progress" ${tp?.status==='in_progress'?'selected':''}>In Progress</option>
-              <option value="completed"   ${tp?.status==='completed'?'selected':''}>Completed</option>
-            </select>
+            <div>
+              <label class="form-label">Status</label>
+              <select id="tpStatus" class="select">
+                <option value="open"        ${tp?.status==='open'?'selected':''}>Open</option>
+                <option value="in_progress" ${tp?.status==='in_progress'?'selected':''}>In Progress</option>
+                <option value="completed"   ${tp?.status==='completed'?'selected':''}>Completed</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -7985,26 +8893,25 @@ async function submitTreatmentModal(riskId, tpId) {
   if (!title) { alert('Title is required'); return }
   const body = {
     title,
-    description:  dom('tpDesc')?.value   || '',
-    responsible:  dom('tpResp')?.value   || '',
-    dueDate:      dom('tpDue')?.value    || null,
-    status:       dom('tpStatus')?.value || 'open'
+    description:  dom('tpDesc')?.value    || '',
+    responsible:  dom('tpResp')?.value    || '',
+    orgUnitId:    dom('tpOrgUnit')?.value  || null,
+    dueDate:      dom('tpDue')?.value     || null,
+    status:       dom('tpStatus')?.value  || 'open'
   }
   const url    = tpId ? `/risks/${riskId}/treatments/${tpId}` : `/risks/${riskId}/treatments`
   const method = tpId ? 'PUT' : 'POST'
   const res = await fetch(url, { method, headers: apiHeaders(), body: JSON.stringify(body) })
   if (!res.ok) { const e = await res.json(); alert(e.error || 'Error'); return }
   document.getElementById('treatmentModal')?.remove()
-  document.getElementById('riskDetailModal')?.remove()
-  switchRiskTab(_riskTab)
+  await openRiskDetail(riskId)
 }
 
 async function deleteTreatment(riskId, tpId) {
   if (!confirm('Delete treatment?')) return
   const res = await fetch(`/risks/${riskId}/treatments/${tpId}`, { method: 'DELETE', headers: apiHeaders() })
   if (!res.ok) { const e = await res.json(); alert(e.error || 'Error'); return }
-  document.getElementById('riskDetailModal')?.remove()
-  switchRiskTab(_riskTab)
+  await openRiskDetail(riskId)
 }
 
 function escHtml(str) {
@@ -8207,7 +9114,8 @@ async function switchGdprTab(tab) {
     if (tab === 'deletion')  await renderGdprDeletion(content)
     if (tab === 'dsb')       await renderGdprDsb(content)
   } catch (e) {
-    content.innerHTML = `<p style="color:var(--danger-text);padding:16px"><i class="ph ph-warning"></i> Error loading tab: ${e.message}</p>`
+    if (content.isConnected)
+      content.innerHTML = `<p style="color:var(--danger-text);padding:16px"><i class="ph ph-warning"></i> Error loading tab: ${e.message}</p>`
   }
 }
 
@@ -10496,6 +11404,8 @@ async function openAssetForm(id) {
   const entityOptions = `<option value="">— No entity —</option>` +
     entities.map(e => `<option value="${e.id}"${item?.entityId===e.id?' selected':''}>${escHtml(e.name)}</option>`).join('')
 
+  const ouOptsAsset = await getOrgUnitOptions(item?.orgUnitId || '')
+
   el.innerHTML = `
     <div class="training-form-page">
       <div class="training-form-header">
@@ -10573,6 +11483,12 @@ async function openAssetForm(id) {
               <input id="asCustodian" class="form-input" value="${escHtml(item?.custodian||'')}" placeholder="Team or person">
             </div>
             <div class="form-group">
+              <label class="form-label">Responsible Unit (OE)</label>
+              <select id="asOrgUnit" class="select">${ouOptsAsset}</select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
               <label class="form-label">Entity</label>
               <select id="asEntity" class="select">${entityOptions}</select>
             </div>
@@ -10648,6 +11564,7 @@ async function saveAsset(id) {
     owner:          dom('asOwner')?.value             || '',
     ownerEmail:     dom('asOwnerEmail')?.value        || '',
     custodian:      dom('asCustodian')?.value         || '',
+    orgUnitId:      dom('asOrgUnit')?.value           || null,
     entityId:       dom('asEntity')?.value            || '',
     vendor:         dom('asVendor')?.value            || '',
     version:        dom('asVersion')?.value           || '',
@@ -12200,6 +13117,8 @@ async function openSupplierForm(id = null) {
   const el = dom('suppliersTabContent')
   if (!el) return
 
+  const ouOptsSup = await getOrgUnitOptions(item?.orgUnitId || '')
+
   document.querySelectorAll('.training-tab').forEach(b => b.classList.remove('active'))
 
   el.innerHTML = `
@@ -12259,6 +13178,12 @@ async function openSupplierForm(id = null) {
             <div class="form-group">
               <label class="form-label">Contact E-Mail</label>
               <input id="supContactEmail" class="form-input" type="email" value="${escHtml(item?.contactEmail || '')}" placeholder="email@supplier.com">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Internal Responsible Unit (OE)</label>
+              <select id="supOrgUnit" class="select">${ouOptsSup}</select>
             </div>
           </div>
           <div class="form-group">
@@ -12352,6 +13277,7 @@ async function saveSupplier(id) {
     website:              dom('supWebsite')?.value?.trim()       || '',
     contactName:          dom('supContactName')?.value?.trim()   || '',
     contactEmail:         dom('supContactEmail')?.value?.trim()  || '',
+    orgUnitId:            dom('supOrgUnit')?.value               || null,
     products:             dom('supProducts')?.value              || '',
     description:          dom('supDescription')?.value           || '',
     dataAccess:           !!dom('supDataAccess')?.checked,
@@ -12389,10 +13315,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // bfcache: Chrome hält Seiten im Arbeitsspeicher (Back/Forward Cache).
 // Beim Wiederherstellen aus dem bfcache läuft DOMContentLoaded NICHT erneut.
-// pageshow mit persisted:true feuert stattdessen — Section neu rendern,
-// damit kein veralteter Ladestand aus dem Cache angezeigt wird.
+// pageshow mit persisted:true feuert stattdessen — aber NUR dann neu rendern,
+// wenn noch kein Section-Container existiert (d.h. Seite wirklich veraltet).
+// Andernfalls würde Chrome während eines laufenden async-Renders removeAllDynamicPanels()
+// auslösen und den halbfertigen Container entfernen (Chrome bfcache-Bug).
 window.addEventListener('pageshow', (e) => {
-  if (e.persisted && document.querySelector('.app-body')) {
-    loadSection(currentSection)
-  }
+  if (!e.persisted || !document.querySelector('.app-body')) return
+  const containerIds = [
+    'dashboardContainer','soaContainer','guidanceContainer','riskContainer',
+    'calendarContainer','adminPanelContainer','settingsPanelContainer','reportsContainer',
+    'gdprContainer','trainingContainer','incidentContainer','legalContainer',
+    'goalsContainer','assetsContainer','governanceContainer','bcmContainer','suppliersContainer'
+  ]
+  const alreadyRendered = containerIds.some(id => !!document.getElementById(id))
+  if (!alreadyRendered) loadSection(currentSection)
 })

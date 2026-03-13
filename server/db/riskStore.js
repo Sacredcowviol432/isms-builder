@@ -72,6 +72,12 @@ function create(fields, createdBy) {
     linkedTemplates:   Array.isArray(fields.linkedTemplates)  ? fields.linkedTemplates  : [],
     applicableEntities:Array.isArray(fields.applicableEntities)?fields.applicableEntities: [],
     treatmentPlans:    [],
+    // Scanner-Import-Felder
+    needsReview:       fields.needsReview === true,
+    source:            fields.source     || null,
+    scanRef:           fields.scanRef    || null,
+    cvssScore:         fields.cvssScore  != null ? Number(fields.cvssScore) : null,
+    cveIds:            Array.isArray(fields.cveIds) ? fields.cveIds : [],
     createdAt:         nowISO(),
     updatedAt:         nowISO(),
     createdBy:         createdBy || 'system'
@@ -88,7 +94,8 @@ function update(id, fields) {
   const r = risks[idx]
   const updatable = ['title','description','category','threat','vulnerability','probability',
                      'impact','treatmentOption','mitigationNotes','owner','dueDate','reviewDate','status',
-                     'linkedControls','linkedTemplates','applicableEntities']
+                     'linkedControls','linkedTemplates','applicableEntities',
+                     'needsReview','source','scanRef','cvssScore','cveIds']
   for (const k of updatable) {
     if (fields[k] !== undefined) r[k] = fields[k]
   }
@@ -131,6 +138,24 @@ function restore(id) {
 
 function getDeleted() {
   return load().filter(r => r.deletedAt).map(publicRisk)
+}
+
+// ── Scanner-Import: Review-Queue ──
+
+function getReviewPending() {
+  return load().filter(r => !r.deletedAt && r.needsReview).map(publicRisk)
+}
+
+function approve(id, approvedBy) {
+  const risks = load()
+  const idx = risks.findIndex(r => r.id === id)
+  if (idx === -1) return null
+  risks[idx].needsReview  = false
+  risks[idx].approvedBy   = approvedBy || 'system'
+  risks[idx].approvedAt   = nowISO()
+  risks[idx].updatedAt    = nowISO()
+  save(risks)
+  return publicRisk(risks[idx])
 }
 
 // ── Treatment Plans ──
@@ -220,4 +245,4 @@ function getSummary() {
   return { total: risks.length, byLevel, byCategory, byStatus, openTreatments, top5 }
 }
 
-module.exports = { getAll, getById, create, update, delete: del, permanentDelete, restore, getDeleted, addTreatment, updateTreatment, deleteTreatment, getCalendarEvents, getSummary, CATEGORIES, TREATMENT_OPTS, STATUSES }
+module.exports = { getAll, getById, create, update, delete: del, permanentDelete, restore, getDeleted, getReviewPending, approve, addTreatment, updateTreatment, deleteTreatment, getCalendarEvents, getSummary, CATEGORIES, TREATMENT_OPTS, STATUSES }

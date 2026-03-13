@@ -99,7 +99,9 @@ app.use(require('./routes/public'))
 app.use(require('./routes/trash'))
 app.use(require('./routes/suppliers'))
 app.use(require('./routes/findings'))
+app.use(require('./routes/scanImport'))
 app.use(require('./routes/ai'))
+app.use(require('./routes/orgUnits'))
 
 // Test-user management routes (temporary, test-env only)
 try {

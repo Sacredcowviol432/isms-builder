@@ -9,7 +9,7 @@ const _BASE = process.env.DATA_DIR || path.join(__dirname, '../../data')
 const DB_FILE = path.join(_BASE, 'custom-lists.json')
 
 const DEFAULTS = {
-  templateTypes: ['Policy', 'Procedure', 'Risk', 'SoA', 'Incident', 'Release'],
+  templateTypes: ['Policy', 'Procedure', 'Risk Policy', 'SoA', 'Incident', 'Release'],
   riskCategories: [
     { id: 'technical',      label: 'Technical',      icon: 'ph-cpu' },
     { id: 'organizational', label: 'Organizational', icon: 'ph-users' },

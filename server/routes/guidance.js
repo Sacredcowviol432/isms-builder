@@ -34,6 +34,7 @@ function _syncSeedLang(lang) {
     try { guidanceStore.seedSoaGuide() }         catch {}
     try { guidanceStore.seedPolicyGuide() }      catch {}
     try { guidanceStore.seedIsoNotice() }        catch {}
+    try { guidanceStore.seedSystemhandbuch() }   catch {}
     try { guidanceStore.seedArchitectureDocs() } catch {}
   } catch {}
 }

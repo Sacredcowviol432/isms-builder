@@ -17,6 +17,9 @@ router.get('/risks/calendar', requireAuth, authorize('reader'), (req, res) => {
 router.get('/risks/summary', requireAuth, authorize('reader'), (req, res) => {
   res.json(riskStore.getSummary())
 })
+router.get('/risks/review-pending', requireAuth, authorize('reader'), (req, res) => {
+  res.json(riskStore.getReviewPending())
+})
 router.get('/risks', requireAuth, authorize('reader'), (req, res) => {
   const { category, status, entity } = req.query
   res.json(riskStore.getAll({ category, status, entity }))
@@ -65,6 +68,14 @@ router.post('/risks/:id/restore', requireAuth, authorize('admin'), (req, res) =>
   if (!item) return res.status(404).json({ error: 'Not found' })
   require('../db/auditStore').append({ user: req.user, action: 'restore', resource: 'risk', resourceId: req.params.id })
   res.json(item)
+})
+
+// ── Review-Queue ──
+router.post('/risks/:id/approve', requireAuth, authorizeAuditor, (req, res) => {
+  const r = riskStore.approve(req.params.id, req.user)
+  if (!r) return res.status(404).json({ error: 'Not found' })
+  require('../db/auditStore').append({ user: req.user, action: 'approve', resource: 'risk', resourceId: r.id, detail: r.title })
+  res.json(r)
 })
 
 router.post('/risks/:id/treatments', requireAuth, authorizeAuditor, (req, res) => {

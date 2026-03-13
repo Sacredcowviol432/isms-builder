@@ -54,7 +54,7 @@ Stand: 2026-03-09 | Version: V 1.28 (Lieferkettenmodul + Risikomanagement Multi-
 Der ISMS Builder ist eine eigenständige Node.js/Express-Anwendung mit Vanilla-JS-SPA zur Erstellung, Verwaltung und Versionierung von ISMS-Dokumenten. Unterstützt werden mehrere Compliance-Frameworks sowie GDPR, Risikomanagement, Training und Reporting.
 
 **Tech-Stack:** Node.js ≥18, Express, JWT, bcryptjs, multer, better-sqlite3
-**Persistenz:** JSON-Dateien (Standard) oder SQLite (via `STORAGE_BACKEND=sqlite`)
+**Persistenz:** JSON-Dateien (Standard), SQLite (empfohlen, `STORAGE_BACKEND=sqlite`), MariaDB/MySQL (`STORAGE_BACKEND=mariadb`), PostgreSQL-Stub (`STORAGE_BACKEND=pg`)
 **Auth:** JWT-Cookie (`sm_session`), bcrypt-Passwörter, optionale TOTP-2FA
 **RBAC:** `reader`/`revision`(1) < `editor`/`dept_head`/`qmb`(2) < `contentowner`/`auditor`(3) < `admin`(4)
 **UI-Schutz:** Alle UI-Seiten außer `login.html` und ihren Abhängigkeiten sind serverseitig durch JWT-Prüfung geschützt. Unauthentifizierte Anfragen werden mit `302 → /ui/login.html` umgeleitet — unabhängig vom Client-seitigen `logincheck.js`.
@@ -160,7 +160,15 @@ JWT_SECRET=<min. 32 zufällige Zeichen>   # openssl rand -hex 32
 JWT_EXPIRES_IN=8h
 PORT=3000
 DEV_HEADER_AUTH=false
-STORAGE_BACKEND=sqlite                    # sqlite (Produktion) | json (nur Entwicklung/Tests)
+STORAGE_BACKEND=sqlite                    # sqlite | json | mariadb | postgres
+
+# MariaDB/MySQL (nur wenn STORAGE_BACKEND=mariadb, npm install mysql2 erforderlich)
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_USER=isms
+# DB_PASS=yourpass
+# DB_NAME=isms_builder
+# DB_SSL=false
 
 # SSL (optional – leer lassen für HTTP)
 # SSL_CERT_FILE=ssl/cert.pem
@@ -728,6 +736,7 @@ bash start.sh
 | UI nicht erreichbar (weiße Seite) | Prüfen ob SSL aktiv: `grep SSL .env` → ggf. `https://` statt `http://` |
 | Server startet nicht | `cat .server.log` für Fehlermeldung |
 | Seite (Legal, Reports) kurz leer in Chrome | Behoben: Skeleton-First-Pattern + bfcache-Handler in `app.js` |
+| GDPR-Modul erscheint kurz und verschwindet dann (Chrome) | Ursache: Security-Browser-Extensions (z. B. **Malwarebytes Browser Guard**, uBlock Origin) erkennen CSS-Klassen wie `.gdpr-*` als Cookie-Banner und entfernen den Container. Workaround: Extension für diese Domain deaktivieren oder Chrome Inkognito ohne die Extension nutzen. Betrifft nur Chrome mit entsprechenden Extensions — Firefox und Edge sind nicht betroffen. |
 | Neue SoA-Frameworks fehlen | Server neu starten → Merge-Logik ergänzt fehlende Controls automatisch |
 
 ---
@@ -1268,7 +1277,7 @@ SMTP_USER=isms@yourcompany.com
 
 ---
 
-## 31. Storage-Backends & Migration (JSON → SQLite → PostgreSQL)
+## 31. Storage-Backends & Migration (JSON → SQLite → MariaDB / PostgreSQL)
 
 ### Übersicht der Backends
 
@@ -1276,9 +1285,12 @@ SMTP_USER=isms@yourcompany.com
 |---|---|---|
 | **JSON** | `STORAGE_BACKEND=json` | Entwicklung, Tests, Quick-Start |
 | **SQLite** | `STORAGE_BACKEND=sqlite` | **Produktivbetrieb** (Standard) |
-| **PostgreSQL** | `STORAGE_BACKEND=pg` | Multi-Instanz, hohe Last (zukünftig) |
+| **MariaDB/MySQL** | `STORAGE_BACKEND=mariadb` | Kleines Team, vorhandene MySQL-Infra |
+| **PostgreSQL** | `STORAGE_BACKEND=pg` | Multi-Instanz, hohe Last (Stub) |
 
 **Warum SQLite für Produktion?** SQLite ist für einen selbst gehosteten ISMS-Dienst mit einer bis wenigen gleichzeitigen Nutzern ideal: keine Serverinfrastruktur, ACID-Transaktionen, WAL-Modus, Foreign Keys, einfaches Backup per `cp data/isms.db backup.db`.
+
+**Wann MariaDB?** Wenn bereits eine MySQL/MariaDB-Infrastruktur vorhanden ist (z. B. gemeinsam genutzter Datenbankserver), mehrere Instanzen denselben Datenstand teilen sollen, oder bewusst kein SQLite-File im Dateisystem liegen soll.
 
 ### Migration JSON → SQLite
 
@@ -1308,37 +1320,56 @@ Das Migrationsskript (`tools/migrate-json-to-sqlite.js`) überträgt alle Daten 
 sqlite3 data/isms.db "SELECT COUNT(*) FROM templates;"
 ```
 
+### Migration JSON → MariaDB/MySQL
+
+**Voraussetzungen:**
+
+```bash
+# mysql2 installieren
+npm install mysql2
+
+# Datenbank und Benutzer anlegen
+mysql -u root -p <<'SQL'
+CREATE DATABASE isms_builder CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'isms'@'localhost' IDENTIFIED BY 'yourpass';
+GRANT ALL PRIVILEGES ON isms_builder.* TO 'isms'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+```
+
+**Migration und Umstellung:**
+
+```bash
+# 1. Verbindungsparameter in .env eintragen
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=isms
+DB_PASS=yourpass
+DB_NAME=isms_builder
+
+# 2. Migrationsskript ausführen (idempotent, bestehende Zeilen werden übersprungen)
+node tools/migrate-json-to-mariadb.js
+
+# 3. Backend umschalten
+sed -i 's/STORAGE_BACKEND=.*/STORAGE_BACKEND=mariadb/' .env
+
+# 4. Server neu starten
+npm start
+```
+
+**Überprüfung:**
+```bash
+mysql -u isms -p isms_builder -e "SELECT COUNT(*) FROM templates;"
+```
+
+**Status:** `server/db/mariadbStore.js` und `server/db/mariadbDatabase.js` sind vollständig implementiert. Das Migrationsskript überträgt: Templates, Training, Entities, Risks, Guidance, Goals, Assets, Suppliers, GDPR (VVT/AV/DSFA/Incidents/DSAR/TOMs).
+
 ### Migration SQLite → PostgreSQL (geplant)
 
 PostgreSQL wird benötigt wenn:
 - Mehrere ISMS-Instanzen auf denselben Datensatz zugreifen
 - Hochverfügbarkeit / Replikation erforderlich ist
 - Lastspitzen durch viele gleichzeitige Nutzer entstehen
-
-**Geplante Umsetzung:**
-
-```bash
-# Zukünftiger Ablauf (pgStore.js ist noch in Entwicklung):
-
-# 1. PostgreSQL einrichten
-createdb isms_builder
-psql isms_builder -c "CREATE USER isms WITH PASSWORD 'secret';"
-psql isms_builder -c "GRANT ALL ON DATABASE isms_builder TO isms;"
-
-# 2. .env anpassen
-STORAGE_BACKEND=pg
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=isms_builder
-PG_USER=isms
-PG_PASSWORD=secret
-
-# 3. Schema initialisieren (beim ersten Start automatisch)
-npm start
-
-# 4. Daten aus SQLite übertragen (geplantes Skript)
-node tools/migrate-sqlite-to-pg.js
-```
 
 **Status:** `server/db/pgStore.js` ist als Stub angelegt. Die vollständige Implementierung folgt in einer späteren Version. Die API-Schnittstelle ist bereits via `server/storage.js` (Façade) abstrahiert — der restliche Code muss nicht geändert werden.
 
@@ -1348,6 +1379,7 @@ node tools/migrate-sqlite-to-pg.js
 |---|---|---|
 | JSON | `tar -czf backup.tar.gz data/` | `scripts/backup-and-deploy.sh` nutzen |
 | SQLite | `sqlite3 data/isms.db ".backup data/isms.db.bak"` | Täglich via Cron |
+| MariaDB | `mysqldump -u isms -p isms_builder > backup.sql` | Täglich via Cron |
 | PostgreSQL | `pg_dump isms_builder > backup.sql` | Täglich via Cron + WAL-Archivierung |
 
 ---
@@ -2413,3 +2445,106 @@ Das Findings-Modul erfasst Audit-Feststellungen nach dem **IST → SOLL → Risi
 | `data/findings.json` | Persistenz-Datei |
 | `ui/app.js` | `renderFindingsTab()`, `renderFindingsListArea()`, `openFindingForm()` |
 | `ui/i18n/translations.js` | i18n-Keys `findings_*` in DE/EN/FR/NL |
+
+---
+
+## 49. Dependency-Management & Security-Patching (V 1.33.x)
+
+### Ziel
+
+ISMS Builder verarbeitet personenbezogene und sicherheitsrelevante Daten. Der DSGVO-Anspruch „Ihre Daten bleiben bei Ihnen" verpflichtet dazu, auch die eingesetzten Bibliotheken stets auf einem sicheren Versionsstand zu halten.
+
+---
+
+### Drei Klassen von Abhängigkeiten
+
+| Klasse | Beispiel | Behandlung |
+|--------|----------|------------|
+| **Normal** (Minor/Patch) | `express-validator`, `nodemailer`, `jest` | `npm update` + automatische Dependabot-PRs |
+| **Major-Migration ausstehend** | `express 4→5`, `bcryptjs 2→3`, `dotenv 16→17` | Dokumentiert in `PINNED-DEPS.md`; eigene Release-Version; manuelles Testen erforderlich |
+| **Hard-gepinnt** | `pdf-parse 1.1.1` | Exaktes Pin ohne `^`; Dependabot-Ignore; CI-Guard; vollständige Begründung in `PINNED-DEPS.md` |
+
+---
+
+### Automatisierung (GitHub)
+
+**Dependabot** (`.github/dependabot.yml`):
+- Prüft wöchentlich montags alle npm-Pakete und GitHub-Actions-Versionen
+- Öffnet automatisch Pull Requests für Minor- und Patch-Updates
+- Major-Version-Upgrades sind **ausgeschlossen** (manuelle Entscheidung erforderlich)
+- `pdf-parse >= 1.1.2` ist dauerhaft ignoriert
+
+**CI-Pipeline** (`.github/workflows/ci.yml`):
+- `npm audit --audit-level=high` — bricht den Build bei Critical/High-Vulnerabilities ab (kein `continue-on-error`)
+- `npm audit --audit-level=moderate` — informational, bricht nicht ab
+- Schritt „Verify pinned dependencies" — prüft ob `pdf-parse` exakt `1.1.1` installiert ist; bei Abweichung: Build-Fehler mit erklärender Meldung
+- JSON-Audit-Report wird als CI-Artefakt 30 Tage gespeichert
+
+---
+
+### Lokaler Prozess
+
+#### Reguläres Update (Minor/Patch)
+
+```bash
+# 1. Sicherheitscheck vor dem Update
+npm run security:check
+
+# 2. Alle Minor/Patch-Updates einspielen
+npm update
+
+# 3. Gepinnte Version kontrollieren (muss 1.1.1 bleiben)
+node -e "console.log(require('./node_modules/pdf-parse/package.json').version)"
+
+# 4. Tests
+npm test
+
+# 5. Noch veraltete Pakete anzeigen (nur noch Major-Versionen erwartet)
+npm outdated
+
+# 6. Sicherheitscheck nach dem Update
+npm run security:check
+```
+
+#### Verfügbare npm-Scripts
+
+| Script | Beschreibung |
+|--------|--------------|
+| `npm run security:check` | Vollständiger lokaler Check: Node.js-Version, npm-Audit, veraltete Pakete, gepinnte Deps, Ollama, .env-Hygiene, SSL-Ablauf |
+| `npm run security:audit` | Nur `npm audit --audit-level=high` |
+| `npm run security:outdated` | Nur `npm outdated` |
+| `npm test` | 192 Tests — müssen nach jedem Update grün sein |
+
+---
+
+### `PINNED-DEPS.md` — zentrales Register
+
+Jede Abweichung vom Standard-Update-Prozess wird in `PINNED-DEPS.md` dokumentiert:
+
+- **Hard-gepinnte Pakete**: Version, Grund, betroffene Dateien, Migrations-Anleitung
+- **Ausstehende Major-Migrationen**: Breaking-Change-Übersicht, Migrations-Checkliste
+
+Das Register wird von CI und `security-check.sh` automatisch ausgewertet. Beim Öffnen eines Dependabot-PRs für ein gepinntes Paket steht im Register sofort warum der PR abzulehnen ist.
+
+---
+
+### Aktueller Stand gepinnter Pakete (V 1.33.2)
+
+| Paket | Version | Grund | Nächste Aktion |
+|-------|---------|-------|----------------|
+| `pdf-parse` | `1.1.1` (Hard-Pin) | v2 hat inkompatible API (Klasse statt Funktion) | Migration von `greenobonePdfParser.js` vor Update |
+| `express` | `4.x` (Major zurückgehalten) | Breaking Changes in v5 (Routing, Query-Parser) | Geplante Migration, eigene Release-Version |
+| `bcryptjs` | `2.x` (Major zurückgehalten) | Hash-Kompatibilität prüfen vor v3 | Regressions-Test mit bestehenden Hashes schreiben |
+| `dotenv` | `16.x` (Major zurückgehalten) | Parse-Verhalten in v17 geändert | Testen mit `.env`-Werten inkl. SSL-Pfade |
+
+---
+
+### Schlüsseldateien
+
+| Datei | Beschreibung |
+|-------|--------------|
+| `PINNED-DEPS.md` | Zentrales Register gepinnter und zurückgehaltener Abhängigkeiten |
+| `.github/dependabot.yml` | Dependabot-Konfiguration mit Ignore-Regeln |
+| `.github/workflows/ci.yml` | CI-Pipeline inkl. Audit-Schritt und Pin-Verifikation |
+| `scripts/security-check.sh` | Lokaler Security- und Patch-Status-Check |
+| `package.json` | `"pdf-parse": "1.1.1"` — exaktes Pin ohne `^` |

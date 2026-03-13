@@ -160,35 +160,97 @@ const PROJECT_ROOT   = path.join(__dirname, '../../')
 
 const ARCH_SEED = [
   {
-    seedId:   'seed_readme',
-    title:    { de: 'ISMS Builder – Projektübersicht (README)',             en: 'ISMS Builder – Project Overview (README)',                        fr: 'ISMS Builder – Vue d\'ensemble du projet (README)',        nl: 'ISMS Builder – Projectoverzicht (README)' },
-    srcFile:  path.join(PROJECT_ROOT, 'README.md'),
+    seedId:        'seed_readme',
+    title:         { de: 'ISMS Builder – Projektübersicht (README)',             en: 'ISMS Builder – Project Overview (README)',                        fr: 'ISMS Builder – Vue d\'ensemble du projet (README)',        nl: 'ISMS Builder – Projectoverzicht (README)' },
+    srcFile:       path.join(PROJECT_ROOT, 'README.md'),
+    refreshContent: true,
   },
   {
-    seedId:   'seed_contributing',
-    title:    { de: 'Beitrag leisten – Developer Guide (CONTRIBUTING)',     en: 'Contributing – Developer Guide (CONTRIBUTING)',                   fr: 'Contribuer – Guide développeur (CONTRIBUTING)',           nl: 'Bijdragen – Ontwikkelaarshandleiding (CONTRIBUTING)' },
-    srcFile:  path.join(PROJECT_ROOT, 'CONTRIBUTING.md'),
+    seedId:        'seed_contributing',
+    title:         { de: 'Beitrag leisten – Developer Guide (CONTRIBUTING)',     en: 'Contributing – Developer Guide (CONTRIBUTING)',                   fr: 'Contribuer – Guide développeur (CONTRIBUTING)',           nl: 'Bijdragen – Ontwikkelaarshandleiding (CONTRIBUTING)' },
+    srcFile:       path.join(PROJECT_ROOT, 'CONTRIBUTING.md'),
+    refreshContent: true,
   },
   {
-    seedId:   'seed_c4',
-    title:    { de: 'Architektur-Diagramme (C4 Model)',                    en: 'Architecture Diagrams (C4 Model)',                                fr: 'Diagrammes d\'architecture (Modèle C4)',                   nl: 'Architectuurdiagrammen (C4-model)' },
-    srcFile:  path.join(ARCH_DOCS_ROOT, 'c4-diagrams.md'),
+    seedId:        'seed_c4',
+    title:         { de: 'Architektur-Diagramme (C4 Model)',                    en: 'Architecture Diagrams (C4 Model)',                                fr: 'Diagrammes d\'architecture (Modèle C4)',                   nl: 'Architectuurdiagrammen (C4-model)' },
+    srcFile:       path.join(ARCH_DOCS_ROOT, 'c4-diagrams.md'),
+    refreshContent: true,
   },
   {
-    seedId:   'seed_datamodel',
-    title:    { de: 'Datenmodell – JSON-Schemas aller Module',              en: 'Data Model – JSON Schemas of All Modules',                        fr: 'Modèle de données – Schémas JSON de tous les modules',    nl: 'Datamodel – JSON-schema\'s van alle modules' },
-    srcFile:  path.join(ARCH_DOCS_ROOT, 'data-model.md'),
+    seedId:        'seed_datamodel',
+    title:         { de: 'Datenmodell – JSON-Schemas aller Module',              en: 'Data Model – JSON Schemas of All Modules',                        fr: 'Modèle de données – Schémas JSON de tous les modules',    nl: 'Datamodel – JSON-schema\'s van alle modules' },
+    srcFile:       path.join(ARCH_DOCS_ROOT, 'data-model.md'),
+    refreshContent: true,
   },
   {
-    seedId:   'seed_openapi',
-    title:    { de: 'API-Referenz (OpenAPI 3.0)',                           en: 'API Reference (OpenAPI 3.0)',                                      fr: 'Référence API (OpenAPI 3.0)',                              nl: 'API-referentie (OpenAPI 3.0)' },
-    srcFile:  path.join(ARCH_DOCS_ROOT, 'openapi.yaml'),
-    wrapCode: 'yaml',   // wrap non-markdown files in fenced code block
+    seedId:        'seed_openapi',
+    title:         { de: 'API-Referenz (OpenAPI 3.0)',                           en: 'API Reference (OpenAPI 3.0)',                                      fr: 'Référence API (OpenAPI 3.0)',                              nl: 'API-referentie (OpenAPI 3.0)' },
+    srcFile:       path.join(ARCH_DOCS_ROOT, 'openapi.yaml'),
+    wrapCode:      'yaml',
+    refreshContent: true,
   },
   {
-    seedId:   'seed_isms_build_documentation',
-    title:    { de: 'ISMS Builder – Vollständige Architekturdokumentation', en: 'ISMS Builder – Full Architecture Documentation',                  fr: 'ISMS Builder – Documentation d\'architecture complète',   nl: 'ISMS Builder – Volledige architectuurdocumentatie' },
-    srcFile:  path.join(PROJECT_ROOT, 'docs/ISMS-build-documentation.md'),
+    seedId:        'seed_isms_build_documentation',
+    title:         { de: 'ISMS Builder – Vollständige Architekturdokumentation', en: 'ISMS Builder – Full Architecture Documentation',                  fr: 'ISMS Builder – Documentation d\'architecture complète',   nl: 'ISMS Builder – Volledige architectuurdocumentatie' },
+    srcFile:       path.join(PROJECT_ROOT, 'docs/ISMS-build-documentation.md'),
+    refreshContent: true,
+  },
+  {
+    seedId:        'seed_tmpl_policy',
+    title:         'Template-Typ: Policy (Richtlinie) — Anwendungsbeispiele',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/template-type-policy.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_tmpl_procedure',
+    title:         'Template-Typ: Procedure (Verfahrensanweisung) — Anwendungsbeispiele',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/template-type-procedure.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_tmpl_soa',
+    title:         'Template-Typ: SoA (Statement of Applicability) — Anwendungsbeispiele',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/template-type-soa.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_tmpl_incident',
+    title:         'Template-Typ: Incident (Sicherheitsvorfall) — Anwendungsbeispiele',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/template-type-incident.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_tmpl_release',
+    title:         'Template-Typ: Release (Änderungs- und Freigabedokumentation) — Anwendungsbeispiele',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/template-type-release.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_risk_policy_vs_register',
+    title:         'Risk Policy vs. Risk Register — Zwei Konzepte, ein Ziel',
+    srcFile:       path.join(PROJECT_ROOT, 'docs/risk-policy-vs-register.md'),
+    refreshContent: true,
+    category:      'systemhandbuch',
+    minRole:       null,
+  },
+  {
+    seedId:        'seed_changelog',
+    title:         'ISMS Builder – Changelog',
+    srcFile:       path.join(PROJECT_ROOT, 'CHANGELOG.md'),
+    refreshContent: true,   // always sync content from file on server start
+    category:      'systemhandbuch',
+    minRole:       null,    // für alle Rollen sichtbar
   },
 ]
 
@@ -204,10 +266,20 @@ function seedArchitectureDocs() {
     if (existing) {
       // Update title and seedLang if language changed
       if (existing.seedLang !== lang) {
-        existing.title   = title
+        existing.title    = title
         existing.seedLang = lang
         existing.updatedAt = new Date().toISOString()
         changed = true
+      }
+      // Always refresh content for entries that change frequently (e.g. CHANGELOG)
+      if (entry.refreshContent && fs.existsSync(entry.srcFile)) {
+        let fresh = fs.readFileSync(entry.srcFile, 'utf8')
+        if (entry.wrapCode) fresh = `\`\`\`${entry.wrapCode}\n${fresh}\n\`\`\``
+        if (existing.content !== fresh) {
+          existing.content   = fresh
+          existing.updatedAt = new Date().toISOString()
+          changed = true
+        }
       }
       continue
     }
@@ -223,11 +295,11 @@ function seedArchitectureDocs() {
       id:          'guid_arch_' + entry.seedId,
       seedId:      entry.seedId,
       seedLang:    lang,
-      category:    'admin-intern',
+      category:    entry.category || 'admin-intern',
       title,
       type:        'markdown',
       content,
-      minRole:     'admin',
+      minRole:     entry.minRole !== undefined ? entry.minRole : 'admin',
       createdAt:   new Date().toISOString(),
       updatedAt:   new Date().toISOString(),
       deletedAt:   null,
@@ -3562,6 +3634,206 @@ const ISO_NOTICE = {
   nl: { title: '⚠ Juridische kennisgeving: ISO-maatregelen — Handmatige installatie vereist', content: ISO_NOTICE_NL },
 }
 
+// ── Systemhandbuch ISMS Build — Admin-Schnellreferenz ────────────────────────
+
+const SYSHANDBUCH_SEED_ID = 'seed_syshandbuch_quickref'
+
+const SYSHANDBUCH_CONTENT = `# Systemhandbuch ISMS Build — Schnellreferenz
+
+> Kompakte Referenz für Administratoren und erfahrene Nutzer. Ausführliche Rollenanleitungen: **Handbuch → Rollen**.
+
+---
+
+## 1. Module im Überblick
+
+| Modul | Sidebar | Mindest-Rolle | Beschreibung |
+|---|---|---|---|
+| **Dashboard** | Dashboard | reader | ISMS-Gesamtübersicht, KPIs, Handlungsbedarf |
+| **Templates** | Alle Template-Typen | reader / editor | Richtlinien, Verfahren, Konzepte — mit Versionierung & Lifecycle |
+| **SoA** | Statement of Applicability | reader | 313 Controls (ISO 27001, BSI, NIS2, EUCS, EUAI, ISO 9001, CRA) |
+| **Risiken** | Risikomanagement | reader | Risikoregister, Heatmap, Behandlungspläne, Auditor-Freigabe |
+| **DSGVO** | DSGVO & Datenschutz | reader | VVT, AVV, DSFA, Datenpannen, DSAR, TOMs, DSB |
+| **Findings** | Audit & Findings | reader | Audit-Feststellungen, Maßnahmenpläne, Statusverfolgung |
+| **Ziele** | Sicherheitsziele | reader | ISO 27001 Kap. 6.2 — KPI-Tracking, Fortschrittsbalken |
+| **Kalender** | Kalender | reader | Alle fälligen Aufgaben modulübergreifend |
+| **Training** | Training & Schulungen | reader | Schulungsplanung, Nachweise, Pflichtschulungen |
+| **Assets** | Asset Management | reader | Hardware, Software, Daten, Services — ISO 27001 A.5.12 |
+| **Lieferkette** | Lieferkettenmanagement | reader | Lieferantenbewertung, Audits, Vertragsfristen |
+| **Legal** | Legal & Verträge | reader | Verträge, NDAs, Datenschutzerklärungen |
+| **BCM** | Business Continuity | reader | BIA, Notfallpläne, Übungen |
+| **Governance** | Governance | reader | Gremien, Beschlüsse, Berichte |
+| **Handbuch** | Handbuch & Anleitungen | reader | Diese Dokumentation |
+| **Vorfälle** | Vorfallsmeldungen | contentowner | Öffentliche + interne Sicherheitsvorfälle |
+| **Admin** | Administration | admin | Benutzer, Einstellungen, Audit-Log, Wartung |
+
+---
+
+## 2. RBAC-Rollen
+
+| Rolle | Rang | Typische Aufgaben |
+|---|---|---|
+| **reader** | 1 | Alle Inhalte lesen, keine Änderungen |
+| **editor** | 2 | Inhalte erstellen und bearbeiten, Lifecycle anstoßen |
+| **dept_head** | 2 | Wie editor — für Abteilungsleiter |
+| **auditor** | 3 | Wie contentowner, zusätzlich Scanner-Import freigeben |
+| **contentowner** | 3 | Inhalte genehmigen, Lifecycle abschließen, CISO/DSB-Funktionen |
+| **admin** | 4 | Vollzugriff inkl. Benutzerverwaltung, Papierkorb, Systemkonfiguration |
+
+**Organisatorische Funktionen** (unabhängig vom Rang): \`ciso\`, \`dso\`, \`qmb\`, \`bcm_manager\`, \`dept_head\`, \`auditor\`, \`admin_notify\` — steuern E-Mail-Benachrichtigungen und Sondersektionen in den Einstellungen.
+
+---
+
+## 3. Template-Lifecycle
+
+\`\`\`
+Entwurf  →  In Prüfung  →  Genehmigt  →  Archiviert
+(editor)    (contentowner)  (contentowner)   (admin)
+                ↓
+            Zurück zu Entwurf (editor)
+\`\`\`
+
+- **Versionierung**: Jede Speicherung erhöht die Versionsnummer; Verlauf über „Verlauf"-Button einsehbar
+- **SoA-Controls verknüpfen**: Button „SoA-Controls" in der Template-Toolbar
+- **Gilt für**: Organisationseinheiten/Gesellschaften zuweisen
+- **Anhänge**: PDF/DOCX bis 20 MB je Template
+- **Nächstes Review**: Datumsfeld im Editor — erscheint im Kalender und Dashboard
+
+---
+
+## 4. Häufige Admin-Aufgaben
+
+### Benutzer anlegen
+Admin → Benutzer → „Benutzer anlegen" → Rolle + organisatorische Funktionen setzen
+
+### Listen anpassen (Template-Typen, Risikokategorien etc.)
+Admin → Listen → gewünschte Liste bearbeiten → Speichern
+
+### Backup erstellen
+\`\`\`bash
+bash scripts/backup-and-deploy.sh
+\`\`\`
+Oder manuell: \`sqlite3 data/isms.db ".backup data/isms.db.bak"\`
+
+### Demo-Daten zurücksetzen
+Admin → Wartung → Demo-Reset (Bestätigungswort: \`RESET\`)
+
+### Vollexport aller Daten
+Admin → Wartung → „Alle Daten exportieren" → JSON-Download
+
+### Audit-Log prüfen
+Admin → Audit-Log — filterbar nach Benutzer, Aktion, Ressource, Datum
+
+### Module oder Frameworks deaktivieren
+Admin → Organisation → System-Konfiguration — Module und SoA-Frameworks per Toggle
+
+---
+
+## 5. Storage-Backends
+
+| Backend | \`.env\` | Empfehlung |
+|---|---|---|
+| JSON | \`STORAGE_BACKEND=json\` | Nur Entwicklung/Tests |
+| **SQLite** | \`STORAGE_BACKEND=sqlite\` | **Standard (Produktion)** |
+| MariaDB/MySQL | \`STORAGE_BACKEND=mariadb\` | Vorhandene MySQL-Infrastruktur |
+| PostgreSQL | \`STORAGE_BACKEND=pg\` | Geplant (Stub) |
+
+Migration: \`node tools/migrate-json-to-sqlite.js\` bzw. \`node tools/migrate-json-to-mariadb.js\`
+
+---
+
+## 6. E-Mail-Benachrichtigungen
+
+Konfiguration: Admin → Organisation → E-Mail-Benachrichtigungen
+
+| Typ | Empfänger (Funktion) |
+|---|---|
+| Überfällige Risiken | CISO |
+| DSAR-Fristen | DSB/DSO |
+| DSGVO-Vorfälle (72h) | DSB/DSO |
+| Auslaufende Verträge | Admin-Notify |
+| Überfällige Reviews | Admin-Notify |
+| Lieferanten-Audits | CISO |
+
+SMTP-Konfiguration in \`.env\`: \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASS\`, \`SMTP_FROM\`
+
+---
+
+## 7. Öffentliche Vorfallmeldung
+
+Nutzer ohne Login können über die Login-Seite Sicherheitsvorfälle melden (Button „Sicherheitsvorfall melden"). Eingegangene Meldungen erscheinen in der **Vorfallsmeldungen**-Sektion (minRole: contentowner) mit Referenz-ID \`INC-YYYY-NNNN\`.
+
+---
+
+## 8. 2FA & Sicherheitsrichtlinien
+
+- **2FA aktivieren**: Einstellungen → Zwei-Faktor-Authentifizierung → QR-Code scannen
+- **2FA-Pflicht für alle**: Admin → Organisation → Sicherheitsrichtlinien → „2FA erforderlich"
+- Nutzer ohne 2FA sehen einen orangefarbenen Hinweis-Chip in der Topbar
+
+---
+
+## 9. KI-Integration (Ollama, lokal, DSGVO-konform)
+
+Ollama wird an drei Stellen genutzt — alle Verarbeitungen erfolgen **lokal**, keine Daten verlassen das System.
+
+| Funktion | Modell | Fallback |
+|---|---|---|
+| **Semantische Suche** (Topbar) | \`nomic-embed-text\` (Embeddings) | Volltextsuche |
+| **Scanner-Import** (Greenbone/OpenVAS PDF) | \`llama3.2:3b\` (Texterkennung) | Regex-Parser |
+| **Scanner-Import** (XML) | kein LLM nötig | — |
+
+**Warum Ollama beim Scanner-Import?** Der reine Regex-Parser erkennt nur bekannte Feldbezeichnungen in PDF-Berichten. Das LLM-Fallback versteht auch abweichende Formatierungen, freie Textfelder und unterschiedliche Sprachvarianten — deutlich höhere Erkennungsrate bei heterogenen Scan-Berichten.
+
+### Einrichtung
+\`\`\`bash
+# Ollama installieren (falls noch nicht vorhanden)
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Benötigte Modelle laden
+ollama pull nomic-embed-text   # Semantische Suche
+ollama pull llama3.2:3b        # Scanner-Import PDF
+
+# Status prüfen
+ollama list
+\`\`\`
+
+- **Status im System**: Admin → Organisation → KI-Status (\`GET /api/ai/status\`)
+- **Neuindexieren**: Admin → Wartung oder \`POST /api/ai/reindex\` (nur admin)
+- Ohne Ollama laufen alle Funktionen weiterhin — nur mit reduzierter Erkennungsqualität
+`
+
+function seedSystemhandbuch() {
+  const docs = load()
+  const existing = docs.find(d => d.seedId === SYSHANDBUCH_SEED_ID && !d.deletedAt)
+  if (!existing) {
+    docs.push({
+      id:             'guid_syshandbuch_quickref',
+      seedId:         SYSHANDBUCH_SEED_ID,
+      category:       'systemhandbuch',
+      type:           'markdown',
+      pinOrder:       3,
+      minRole:        null,
+      title:          'Systemhandbuch ISMS Build',
+      content:        SYSHANDBUCH_CONTENT,
+      createdAt:      nowISO(),
+      updatedAt:      nowISO(),
+      deletedAt:      null,
+      deletedBy:      null,
+      createdBy:      'system',
+      linkedControls: [],
+      linkedPolicies: [],
+    })
+    save(docs)
+  } else {
+    // Refresh content when it changes
+    let changed = false
+    if (existing.content !== SYSHANDBUCH_CONTENT) { existing.content = SYSHANDBUCH_CONTENT; changed = true }
+    if (existing.pinOrder !== 3)                   { existing.pinOrder = 3;                   changed = true }
+    if (existing.minRole  !== null)                { existing.minRole  = null;                changed = true }
+    if (changed) { existing.updatedAt = nowISO(); save(docs) }
+  }
+}
+
 function seedIsoNotice() {
   const lang = _getDemoLang()
   const docs = load()
@@ -3594,4 +3866,5 @@ module.exports = {
   seedSoaGuide,
   seedPolicyGuide,
   seedIsoNotice,
+  seedSystemhandbuch,
 }

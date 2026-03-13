@@ -238,8 +238,9 @@ Contributions are very welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 | ✅ Done | Multilingual demo bundles (DE / EN / FR / NL) |
 | ✅ Done | Audit Findings module with action plans (V 1.32.0) |
 | ✅ Done | FR/NL Guidance translations + admin language configuration (V 1.32.0) |
+| ✅ Done | MariaDB/MySQL backend (`STORAGE_BACKEND=mariadb`, V 1.34.1) |
+| ✅ Done | Scanner → Risk draft (Greenbone/OpenVAS XML + PDF import, V 1.33.0) |
 | 🔜 Next | PostgreSQL backend |
-| 🔜 Next | Scanner → Risk draft (nmap/OpenVAS XML import) |
 | 🔜 Next | Audit-log anomaly detection (LLM batch) |
 | 🚀 Later | ownCloud / Nextcloud integration |
 | 🚀 Later | Policy gap analysis (LLM) |

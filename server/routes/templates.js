@@ -76,7 +76,7 @@ router.put('/template/:type/:id/move', requireAuth, authorize('contentowner'), a
   res.json(result)
 })
 
-router.delete('/template/:type/:id', requireAuth, authorize('admin'), async (req, res) => {
+router.delete('/template/:type/:id', requireAuth, authorize('contentowner'), async (req, res) => {
   const { type, id } = req.params
   const ok = await storage.deleteTemplate?.(type, id, req.user)
   if (!ok) return res.status(404).json({ error: 'Not found' })

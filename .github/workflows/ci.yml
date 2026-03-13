@@ -35,6 +35,51 @@ jobs:
           JWT_SECRET: ci-test-secret-do-not-use-in-production
           STORAGE_BACKEND: json
 
-      - name: Check for vulnerabilities
+      - name: Verify pinned dependencies
+        run: |
+          # pdf-parse muss exakt 1.1.1 sein — v2 hat inkompatible API (siehe PINNED-DEPS.md)
+          INSTALLED=$(node -e "console.log(require('./node_modules/pdf-parse/package.json').version)")
+          if [ "$INSTALLED" != "1.1.1" ]; then
+            echo "::error::pdf-parse ist auf Version $INSTALLED — muss exakt 1.1.1 sein! Siehe PINNED-DEPS.md"
+            exit 1
+          fi
+          echo "✓ pdf-parse $INSTALLED (korrekt gepinnt)"
+
+      - name: Security audit (critical + high — hard fail)
         run: npm audit --audit-level=high
+
+      - name: Security audit (moderate — informational)
+        run: npm audit --audit-level=moderate
         continue-on-error: true
+
+      - name: Check for outdated packages
+        run: npm outdated || true
+
+  security-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    # Läuft nur auf main, nicht bei jedem Feature-Branch-Push
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Full audit report (JSON)
+        run: npm audit --json > audit-report.json || true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: audit-report.json
+          retention-days: 30

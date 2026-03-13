@@ -136,4 +136,34 @@ router.post('/soa/import-controls', requireAuth, authorize('admin'), express.jso
   res.json({ imported: valid.length })
 })
 
+// ── Custom Controls ───────────────────────────────────────────────────────────
+
+router.post('/soa/custom', requireAuth, authorize('contentowner'), (req, res) => {
+  try {
+    const ctrl = soaStore.createCustomControl(req.body, { changedBy: req.user })
+    auditStore.append({ user: req.user, action: 'create', resource: 'custom-control', detail: ctrl.title })
+    res.status(201).json(ctrl)
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.put('/soa/custom/:id', requireAuth, authorize('contentowner'), (req, res) => {
+  const updated = soaStore.updateCustomControl(req.params.id, req.body, { changedBy: req.user })
+  if (!updated) return res.status(404).json({ error: 'Not found or not a custom control' })
+  auditStore.append({ user: req.user, action: 'update', resource: 'custom-control', detail: updated.title })
+  res.json(updated)
+})
+
+router.delete('/soa/custom/:id', requireAuth, authorize('contentowner'), (req, res) => {
+  const result = soaStore.deleteCustomControl(req.params.id)
+  if (!result.ok) {
+    if (result.reason === 'not_found')  return res.status(404).json({ error: 'Not found' })
+    if (result.reason === 'not_custom') return res.status(403).json({ error: 'Cannot delete built-in controls' })
+    if (result.reason === 'has_links')  return res.status(409).json({ error: 'Control is linked to templates — unlink first' })
+  }
+  auditStore.append({ user: req.user, action: 'delete', resource: 'custom-control', detail: req.params.id })
+  res.json({ ok: true })
+})
+
 module.exports = router

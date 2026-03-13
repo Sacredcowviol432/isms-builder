@@ -27,6 +27,7 @@ const FRAMEWORKS = {
   ISO9000:  { id: 'ISO9000',  label: 'ISO 9000:2015',       color: '#2dd4bf' },
   ISO9001:  { id: 'ISO9001',  label: 'ISO 9001:2015',       color: '#f472b6' },
   CRA:      { id: 'CRA',      label: 'EU Cyber Resilience Act', color: '#e11d48' },
+  CUSTOM:   { id: 'CUSTOM',   label: 'Custom Controls',         color: '#64748b' },
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -392,6 +393,56 @@ module.exports = {
       }
     }
     return framework ? result[framework] : result
+  },
+
+  // Create a custom control (framework = 'CUSTOM', id = 'CUSTOM-<timestamp>')
+  createCustomControl: (body, { changedBy } = {}) => {
+    const title = (body.title || '').trim()
+    if (!title) throw new Error('title required')
+    const now = new Date().toISOString()
+    const id   = 'CUSTOM-' + Date.now()
+    store[id] = {
+      id,
+      framework:        'CUSTOM',
+      theme:            (body.theme || 'Custom').trim(),
+      title,
+      description:      (body.description || '').trim(),
+      applicable:       true,
+      status:           'not_started',
+      owner:            (body.owner || '').trim(),
+      justification:    (body.justification || '').trim(),
+      linkedTemplates:  [],
+      createdAt:        now,
+      updatedAt:        now,
+      updatedBy:        changedBy || 'unknown',
+      isCustom:         true,
+    }
+    save(store)
+    return store[id]
+  },
+
+  // Update a custom control's editable metadata
+  updateCustomControl: (id, body, { changedBy } = {}) => {
+    if (!store[id] || !store[id].isCustom) return null
+    const allowed = ['title', 'theme', 'description', 'owner', 'applicable', 'status', 'justification', 'linkedTemplates', 'applicableEntities']
+    for (const key of allowed) {
+      if (body[key] !== undefined) store[id][key] = body[key]
+    }
+    store[id].updatedAt = new Date().toISOString()
+    store[id].updatedBy = changedBy || 'unknown'
+    save(store)
+    return store[id]
+  },
+
+  // Delete a custom control — only allowed when not yet linked to any templates
+  deleteCustomControl: (id) => {
+    const ctrl = store[id]
+    if (!ctrl)           return { ok: false, reason: 'not_found' }
+    if (!ctrl.isCustom)  return { ok: false, reason: 'not_custom' }
+    if ((ctrl.linkedTemplates || []).length > 0) return { ok: false, reason: 'has_links' }
+    delete store[id]
+    save(store)
+    return { ok: true }
   },
 
   FRAMEWORKS,
